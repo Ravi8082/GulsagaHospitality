@@ -1,0 +1,515 @@
+// Prisma's MySQL schema: core admin/session, public portfolio, recruitment, private file, email, and audit models.
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "mysql"
+ url = env("DATABASE_URL")
+}
+// Administrator identities and editable public portfolio/service/settings content.
+model AdminUser {
+ id String @id @default(uuid()) @db.VarChar(36)
+ email String @unique @db.VarChar(255)
+ name String @db.VarChar(100)
+ passwordHash String @db.VarChar(255)
+ role String @default("ADMIN") @db.VarChar(20)
+ enabled Boolean @default(true)
+ permissions Json
+ sessionVersion Int @default(0)
+ mustChangePassword Boolean @default(false)
+ experienceModeration ExperienceModerationHistory[] @relation("ExperienceModerator")
+ commentModeration ExperienceComment[] @relation("CommentModerator")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+}
+model Project {
+ id String @id @default(uuid()) @db.VarChar(36)
+ slug String @unique @db.VarChar(120)
+ title String @db.VarChar(160)
+ category String @db.VarChar(160)
+ description String @db.Text
+ url String? @db.VarChar(500)
+ imageId String? @db.VarChar(36)
+ image UploadedFile? @relation(fields:[imageId], references:[id], onDelete:SetNull)
+ status String @default("LIVE") @db.VarChar(20)
+ published Boolean @default(false)
+ displayOrder Int @default(0)
+ archived Boolean @default(false)
+ longDescription String? @db.Text
+ features Json?
+ techTags Json?
+ role String? @db.VarChar(200)
+ client String? @db.VarChar(200)
+ employeeAssignments EmployeeProject[]
+ employeeReports EmployeeDailyReport[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([published,archived,displayOrder])
+}
+model Service {
+ id String @id @default(uuid()) @db.VarChar(36)
+ title String @db.VarChar(160)
+ description String @db.Text
+ icon String @default("code") @db.VarChar(30)
+ published Boolean @default(false)
+ displayOrder Int @default(0)
+ archived Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+}
+model TeamMember {
+ id String @id @default(uuid()) @db.VarChar(36)
+ name String @db.VarChar(120)
+ role String @db.VarChar(120)
+ bio String @db.Text
+ imageId String? @db.VarChar(36)
+ image UploadedFile? @relation("TeamMemberImage", fields:[imageId], references:[id], onDelete:SetNull)
+ linkedin String? @db.VarChar(500)
+ displayOrder Int @default(0)
+ published Boolean @default(false)
+ archived Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([published,archived,displayOrder])
+}
+model BlogPost {
+ id String @id @default(uuid()) @db.VarChar(36)
+ slug String @unique @db.VarChar(120)
+ title String @db.VarChar(180)
+ excerpt String @db.VarChar(500)
+ content String @db.LongText
+ author String? @db.VarChar(120)
+ coverImageId String? @db.VarChar(36)
+ coverImage UploadedFile? @relation("BlogCoverImage", fields:[coverImageId], references:[id], onDelete:SetNull)
+ publishedAt DateTime?
+ published Boolean @default(false)
+ archived Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([published,archived,publishedAt])
+}
+model SiteSetting {
+ key String @id @db.VarChar(100)
+ value String @db.Text
+ updatedAt DateTime @updatedAt
+}
+model SocialLink {
+ id String @id @default(uuid()) @db.VarChar(36)
+ label String @db.VarChar(100)
+ url String @db.VarChar(500)
+ verified Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+}
+// OTP verification grants gate contact and recruitment submissions.
+model ContactSubmission {
+ id String @id @default(uuid()) @db.VarChar(36)
+ reference String @unique @db.VarChar(50)
+ name String @db.VarChar(100)
+ email String @db.VarChar(255)
+ mobile String @db.VarChar(20)
+ company String? @db.VarChar(160)
+ type String @db.VarChar(60)
+ subject String @db.VarChar(180)
+ message String @db.Text
+ consent Boolean
+ status String @default("NEW") @db.VarChar(30)
+ notes String @db.Text
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([status,createdAt])
+ @@index([email])
+}
+model OtpVerification {
+ id String @id @default(uuid()) @db.VarChar(36)
+ email String @db.VarChar(255)
+ purpose String @db.VarChar(30)
+ codeHash String @db.VarChar(64)
+ expiresAt DateTime
+ attempts Int @default(0)
+ consumed Boolean @default(false)
+ verified Boolean @default(false)
+ grantHash String? @db.VarChar(64)
+ grantExpiresAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([email,purpose,createdAt])
+ @@index([expiresAt])
+ @@index([grantHash])
+}
+model JobPosting {
+ id String @id @default(uuid()) @db.VarChar(36)
+ slug String @unique @db.VarChar(120)
+ title String @db.VarChar(160)
+ description String @db.Text
+ responsibilities String @db.Text
+ skills String @db.Text
+ qualification String @db.Text
+ experience String @db.VarChar(100)
+ type String @db.VarChar(30)
+ department String @db.VarChar(100)
+ location String @db.VarChar(120)
+ deadline DateTime
+ photoRequired Boolean @default(false)
+ published Boolean @default(false)
+ status String @default("DRAFT") @db.VarChar(20)
+ featured Boolean @default(false)
+ applications JobApplication[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([published,status,deadline])
+}
+model JobApplication {
+ id String @id @default(uuid()) @db.VarChar(36)
+ reference String @unique @db.VarChar(50)
+ jobId String @db.VarChar(36)
+ job JobPosting @relation(fields:[jobId],references:[id])
+ name String @db.VarChar(100)
+ email String @db.VarChar(255)
+ mobile String @db.VarChar(20)
+ qualification String @db.VarChar(160)
+ skills String @db.Text
+ experience String @db.VarChar(100)
+ city String @db.VarChar(120)
+ introduction String @db.Text
+ linkedin String? @db.VarChar(500)
+ github String? @db.VarChar(500)
+ portfolio String? @db.VarChar(500)
+ coverLetter String? @db.Text
+ resumeId String @unique @db.VarChar(36)
+ resume UploadedFile @relation("Resume",fields:[resumeId],references:[id])
+ photoId String? @db.VarChar(36)
+ photo UploadedFile? @relation("Photo",fields:[photoId],references:[id])
+ employee Employee?
+ consent Boolean
+ status String @default("SUBMITTED") @db.VarChar(30)
+ notes String @db.Text
+ history ApplicationStatusHistory[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([jobId,status,createdAt])
+ @@index([email])
+}
+// File metadata points to private disk/S3 storage; only published MEDIA rows have a public image endpoint.
+model UploadedFile {
+ id String @id @default(uuid()) @db.VarChar(36)
+ storageKey String @unique @db.VarChar(100)
+ originalName String @db.VarChar(255)
+ mime String @db.VarChar(100)
+ size Int
+ purpose String @db.VarChar(30)
+ published Boolean @default(false)
+ projects Project[]
+ teamMemberImages TeamMember[] @relation("TeamMemberImage")
+ blogCoverImages BlogPost[] @relation("BlogCoverImage")
+ resumeFor JobApplication? @relation("Resume")
+ photoFor JobApplication[] @relation("Photo")
+ employeePhoto Employee? @relation("EmployeePhoto")
+ experienceMedia ExperienceMedia[]
+ createdAt DateTime @default(now())
+}
+model Employee {
+ id String @id @default(uuid()) @db.VarChar(36)
+ applicationId String? @unique @db.VarChar(36)
+ application JobApplication? @relation(fields:[applicationId],references:[id],onDelete:Restrict)
+ name String @db.VarChar(100)
+ email String @unique @db.VarChar(255)
+ passwordHash String @db.VarChar(255)
+ mustChangePassword Boolean @default(true)
+ sessionVersion Int @default(0)
+ mobile String @db.VarChar(20)
+ qualification String @db.VarChar(160)
+ skills String @db.Text
+ experience String @db.VarChar(100)
+ city String @db.VarChar(120)
+ introduction String @db.Text
+ linkedin String? @db.VarChar(500)
+ github String? @db.VarChar(500)
+ portfolio String? @db.VarChar(500)
+ jobTitle String @db.VarChar(160)
+ photoId String? @unique @db.VarChar(36)
+ photo UploadedFile? @relation("EmployeePhoto",fields:[photoId],references:[id],onDelete:SetNull)
+ status String @default("ACTIVE") @db.VarChar(20)
+ salary Decimal @default(0) @db.Decimal(12,2)
+ allowances Decimal @default(0) @db.Decimal(12,2)
+ deductions Decimal @default(0) @db.Decimal(12,2)
+ assignments EmployeeProject[]
+ attendance EmployeeAttendance[]
+ reports EmployeeDailyReport[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([name])
+ @@index([email])
+}
+model EmployeeProject {
+ id String @id @default(uuid()) @db.VarChar(36)
+ employeeId String @db.VarChar(36)
+ employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+ projectId String @db.VarChar(36)
+ project Project @relation(fields:[projectId],references:[id],onDelete:Restrict)
+ assignedAt DateTime @default(now())
+ @@unique([employeeId,projectId])
+ @@index([projectId])
+}
+model EmployeeAttendance {
+ id String @id @default(uuid()) @db.VarChar(36)
+ employeeId String @db.VarChar(36)
+ employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+ date DateTime @db.Date
+ status String @db.VarChar(20)
+ notes String? @db.VarChar(500)
+ markedBy String @db.VarChar(36)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@unique([employeeId,date])
+ @@index([date])
+}
+model EmployeeDailyReport {
+ id String @id @default(uuid()) @db.VarChar(36)
+ employeeId String @db.VarChar(36)
+ employee Employee @relation(fields:[employeeId],references:[id],onDelete:Cascade)
+ projectId String? @db.VarChar(36)
+ project Project? @relation(fields:[projectId],references:[id],onDelete:SetNull)
+ date DateTime @db.Date
+ title String @db.VarChar(160)
+ summary String @db.Text
+ completed String @db.Text
+ blockers String? @db.Text
+ nextSteps String? @db.Text
+ hours Decimal @db.Decimal(4,2)
+ status String @default("SUBMITTED") @db.VarChar(20)
+ adminFeedback String? @db.Text
+ reviewedBy String? @db.VarChar(36)
+ reviewedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@unique([employeeId,date])
+ @@index([projectId])
+ @@index([status,date])
+}
+model EmailNotification {
+ id String @id @default(uuid()) @db.VarChar(36)
+ recipient String @db.VarChar(255)
+ subject String @db.VarChar(255)
+ text String @db.Text
+ html String @db.Text
+ state String @default("PENDING") @db.VarChar(20)
+ attempts Int @default(0)
+ availableAt DateTime @default(now())
+ lastError String? @db.VarChar(100)
+ acceptedAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([state,availableAt])
+}
+model ApplicationStatusHistory {
+ id String @id @default(uuid()) @db.VarChar(36)
+ applicationId String @db.VarChar(36)
+ application JobApplication @relation(fields:[applicationId],references:[id],onDelete:Cascade)
+ status String @db.VarChar(30)
+ adminId String @db.VarChar(36)
+ createdAt DateTime @default(now())
+ @@index([applicationId,createdAt])
+}
+model AuditLog {
+ id String @id @default(uuid()) @db.VarChar(36)
+ adminId String @db.VarChar(36)
+ action String @db.VarChar(80)
+ resourceId String? @db.VarChar(100)
+ createdAt DateTime @default(now())
+ @@index([createdAt])
+}
+model PasswordReset {
+ id String @id @default(uuid()) @db.VarChar(36)
+ email String @db.VarChar(255)
+ tokenHash String @unique @db.VarChar(64)
+ expiresAt DateTime
+ used Boolean @default(false)
+ createdAt DateTime @default(now())
+}
+
+model CommunityUser {
+ id String @id @default(uuid()) @db.VarChar(36)
+ email String @unique @db.VarChar(255)
+ displayName String @db.VarChar(100)
+ memberVerified Boolean @default(false)
+ enabled Boolean @default(true)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ experiences MemberExperience[]
+ ratings ExperienceRating[]
+ likes ExperienceLike[]
+ comments ExperienceComment[]
+ reports ExperienceReport[]
+ notifications ExperienceNotification[]
+ @@index([memberVerified, enabled])
+}
+
+model ExperienceCategory {
+ id String @id @default(uuid()) @db.VarChar(36)
+ slug String @unique @db.VarChar(60)
+ name String @unique @db.VarChar(100)
+ enabled Boolean @default(true)
+ displayOrder Int @default(0)
+ createdAt DateTime @default(now())
+ experiences MemberExperience[]
+ @@index([enabled, displayOrder])
+}
+
+model MemberExperience {
+ id String @id @default(uuid()) @db.VarChar(36)
+ userId String @db.VarChar(36)
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ categoryId String @db.VarChar(36)
+ category ExperienceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+ destinationId Int?
+ resortId Int?
+ title String @db.VarChar(180)
+ shortDescription String @db.VarChar(500)
+ story String @db.LongText
+ visitDate DateTime? @db.Date
+ overallRating Int
+ hospitalityRating Int
+ cleanlinessRating Int
+ locationRating Int
+ amenitiesRating Int
+ foodRating Int
+ status String @default("PENDING") @db.VarChar(24)
+ moderationReason String? @db.VarChar(1000)
+ featured Boolean @default(false)
+ verifiedStay Boolean @default(false)
+ views Int @default(0)
+ publishedAt DateTime?
+ moderatedAt DateTime?
+ moderatedById String? @db.VarChar(36)
+ media ExperienceMedia[]
+ ratings ExperienceRating[]
+ likes ExperienceLike[]
+ comments ExperienceComment[]
+ reports ExperienceReport[]
+ moderationHistory ExperienceModerationHistory[]
+ viewsLog ExperienceView[]
+ notifications ExperienceNotification[]
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([status, publishedAt])
+ @@index([categoryId, status])
+ @@index([destinationId, status])
+ @@index([resortId, status])
+ @@index([userId, createdAt])
+ @@index([featured, status, publishedAt])
+}
+
+model ExperienceMedia {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ uploadedFileId String @unique @db.VarChar(36)
+ uploadedFile UploadedFile @relation(fields: [uploadedFileId], references: [id], onDelete: Restrict)
+ kind String @db.VarChar(10)
+ thumbnailStorageKey String? @db.VarChar(100)
+ altText String? @db.VarChar(255)
+ displayOrder Int @default(0)
+ createdAt DateTime @default(now())
+ @@index([experienceId, displayOrder])
+}
+
+model ExperienceRating {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ userId String @db.VarChar(36)
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ hospitality Int
+ cleanliness Int
+ location Int
+ amenities Int
+ food Int
+ overall Int
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@unique([experienceId, userId])
+ @@index([experienceId, overall])
+}
+
+model ExperienceLike {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ userId String @db.VarChar(36)
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ createdAt DateTime @default(now())
+ @@unique([experienceId, userId])
+ @@index([userId, createdAt])
+}
+
+model ExperienceComment {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ userId String @db.VarChar(36)
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ parentId String? @db.VarChar(36)
+ parent ExperienceComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+ replies ExperienceComment[] @relation("CommentReplies")
+ body String @db.VarChar(2000)
+ status String @default("PENDING") @db.VarChar(24)
+ moderatorId String? @db.VarChar(36)
+ moderator AdminUser? @relation("CommentModerator", fields: [moderatorId], references: [id], onDelete: SetNull)
+ moderatedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ @@index([experienceId, status, createdAt])
+ @@index([parentId, status])
+ @@index([userId, createdAt])
+}
+
+model ExperienceReport {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ userId String @db.VarChar(36)
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ reason String @db.VarChar(60)
+ details String? @db.VarChar(1000)
+ status String @default("OPEN") @db.VarChar(24)
+ reviewedById String? @db.VarChar(36)
+ reviewedAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([status, createdAt])
+ @@unique([experienceId, userId, status])
+}
+
+model ExperienceModerationHistory {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ adminId String @db.VarChar(36)
+ admin AdminUser @relation("ExperienceModerator", fields: [adminId], references: [id], onDelete: Restrict)
+ action String @db.VarChar(32)
+ reason String? @db.VarChar(1000)
+ createdAt DateTime @default(now())
+ @@index([experienceId, createdAt])
+ @@index([adminId, createdAt])
+}
+
+model ExperienceView {
+ id String @id @default(uuid()) @db.VarChar(36)
+ experienceId String @db.VarChar(36)
+ experience MemberExperience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+ viewerHash String? @db.VarChar(64)
+ createdAt DateTime @default(now())
+ @@unique([experienceId, viewerHash])
+ @@index([experienceId, createdAt])
+}
+
+model ExperienceNotification {
+ id String @id @default(uuid()) @db.VarChar(36)
+ userId String @db.VarChar(36)
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ experienceId String? @db.VarChar(36)
+ experience MemberExperience? @relation(fields: [experienceId], references: [id], onDelete: SetNull)
+ kind String @db.VarChar(32)
+ message String @db.VarChar(500)
+ readAt DateTime?
+ createdAt DateTime @default(now())
+ @@index([userId, readAt, createdAt])
+}

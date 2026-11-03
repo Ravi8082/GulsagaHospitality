@@ -1,0 +1,68 @@
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.partner-shell { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; background: #f4f6fa; color: #071a33; }
+.partner-side { background: #071a33; color: #fff; padding: 1.2rem .8rem; display: grid; align-content: start; gap: 1rem; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.partner-brand { color: #d9b866; font-size: 1.4rem; font-weight: 700; text-decoration: none; display: grid; }
+.partner-brand small { font-size: .6rem; letter-spacing: .3em; color: #fff; }
+.partner-badge { background: #d9b866; color: #071a33; border-radius: 99px; padding: .2rem .8rem; font-size: .75rem; font-weight: 700; justify-self: start; }
+.partner-side nav { display: grid; gap: .15rem; }
+.partner-side nav button { display: flex; align-items: center; gap: .6rem; padding: .6rem .8rem; border-radius: 8px; background: none; border: 0; color: #dfe6f1; cursor: pointer; text-align: left; font-size: .88rem; }
+.partner-side nav button[data-active="true"], .partner-side nav button:hover { background: #12305a; color: #d9b866; }
+.partner-main { padding: 1.5rem; display: grid; gap: 1.2rem; align-content: start; min-width: 0; }
+.partner-top { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; justify-content: space-between; }
+.partner-top h1 { font-size: 1.6rem; }
+.partner-top p { color: #5b6677; font-size: .9rem; }
+.partner-switch select, .partner-form input, .partner-form select, .partner-form textarea, .partner-table select, .partner-table input { padding: .5rem; border: 1px solid #ccd3df; border-radius: 8px; background: #fff; }
+.partner-user { display: flex; align-items: center; gap: .6rem; font-weight: 600; }
+.partner-banner { background: linear-gradient(90deg, #071a33, #12305a); background-size: cover; background-position: center; color: #fff; border-radius: 14px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.partner-banner h2 { font-size: 1.5rem; }
+.partner-status { background: #ffffff22; padding: .6rem 1rem; border-radius: 10px; font-size: .8rem; }
+.partner-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .8rem; }
+.partner-card { background: #fff; border-radius: 12px; padding: 1rem; box-shadow: 0 2px 10px #071a3312; overflow-x: auto; }
+.partner-card h2 { margin-bottom: .8rem; font-size: 1.3rem; }
+.partner-card h3 { display: flex; justify-content: space-between; margin-bottom: .6rem; font-size: 1rem; }
+.partner-metric { display: grid; gap: .3rem; }
+.partner-metric span { font-size: .8rem; color: #5b6677; }
+.partner-metric strong { font-size: 1.5rem; }
+.partner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.partner-wide { grid-column: span 2; }
+@media (max-width: 700px) { .partner-wide { grid-column: auto; } }
+.partner-donut { width: 130px; height: 130px; border-radius: 50%; margin: 0 auto 1rem; display: grid; place-items: center; position: relative; }
+.partner-donut span { background: #fff; width: 80px; height: 80px; border-radius: 50%; display: grid; place-content: center; text-align: center; font-weight: 700; }
+.partner-donut small { font-size: .6rem; font-weight: 400; }
+.partner-legend { list-style: none; padding: 0; display: grid; gap: .3rem; font-size: .85rem; }
+.partner-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .5rem; }
+.partner-actions { display: grid; gap: .5rem; }
+.partner-actions button { padding: .7rem; border: 1px solid #d9b866; border-radius: 8px; background: #fffaf0; cursor: pointer; text-align: left; }
+.partner-actions button:hover { background: #d9b866; }
+.partner-link { background: none; border: 0; color: #9a7416; cursor: pointer; font-size: .8rem; text-decoration: underline; }
+.partner-list { list-style: none; padding: 0; display: grid; gap: .6rem; }
+.partner-list li { display: grid; border-bottom: 1px solid #eee; padding-bottom: .4rem; }
+.partner-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.partner-table th { text-align: left; color: #5b6677; font-weight: 600; }
+.partner-table th, .partner-table td { padding: .5rem; border-bottom: 1px solid #eee; vertical-align: middle; }
+.partner-form { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; align-items: center; }
+.partner-stack { display: grid; }
+.partner-stack label { display: grid; gap: .25rem; font-size: .85rem; }
+.partner-note, .partner-empty { color: #5b6677; font-size: .9rem; }
+.partner-actions { display: flex; flex-wrap: wrap; gap: .3rem .8rem; }
+.admin-sidebar .admin-signout, aside .admin-signout { margin-top: .6rem; width: 100%; justify-content: center; gap: .5rem; }
+.partner-link.danger { color: #b3261e; }
+.partner-table-wrap { overflow-x: auto; }
+.permission-grid { display: flex; flex-wrap: wrap; gap: .4rem 1rem; flex-basis: 100%; border: 1px solid #e2e6ee; border-radius: 10px; padding: .6rem .9rem; }
+.permission-grid legend { padding: 0 .4rem; font-size: .8rem; color: #5b6677; }
+.permission-grid label { display: flex; align-items: center; gap: .35rem; font-size: .85rem; text-transform: capitalize; }
+.permission-grid input { padding: 0; }
+.credential-notice { display: grid; gap: .5rem; margin: 0 0 1rem; padding: 1rem; border: 1px solid #c9a24a; border-radius: 12px; background: #fbf5e4; }
+.credential-notice code { font-size: 1.15rem; letter-spacing: .04em; padding: .5rem .7rem; background: #fff; border-radius: 8px; word-break: break-all; }
+.credential-notice p { font-size: .8rem; color: #5b6677; }
+.credential-actions { display: flex; gap: 1rem; }
+.credential-actions .partner-link { display: inline-flex; align-items: center; gap: .3rem; }
+@media (max-width: 860px) { .partner-shell { grid-template-columns: 1fr; } .partner-side { position: static; height: auto; } }
+
+.partner-signout { margin-top: auto; }
+
+.visibility-list { list-style: none; padding: 0; display: grid; gap: .5rem; }
+.visibility-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .7rem 1rem; border: 1px solid #d9b86655; border-radius: 10px; }
+.visibility-list li > span { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.visibility-list small { opacity: .6; }
+.visibility-switch { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; font-weight: 600; }

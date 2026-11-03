@@ -1,0 +1,87 @@
+-- Not executed against a genuine configured MySQL service; this migration remains unverified.
+CREATE TABLE `Employee` (
+  `id` VARCHAR(36) NOT NULL,
+  `applicationId` VARCHAR(36) NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `passwordHash` VARCHAR(255) NOT NULL,
+  `mustChangePassword` BOOLEAN NOT NULL DEFAULT TRUE,
+  `sessionVersion` INTEGER NOT NULL DEFAULT 0,
+  `mobile` VARCHAR(20) NOT NULL,
+  `qualification` VARCHAR(160) NOT NULL,
+  `skills` TEXT NOT NULL,
+  `experience` VARCHAR(100) NOT NULL,
+  `city` VARCHAR(120) NOT NULL,
+  `introduction` TEXT NOT NULL,
+  `linkedin` VARCHAR(500) NULL,
+  `github` VARCHAR(500) NULL,
+  `portfolio` VARCHAR(500) NULL,
+  `jobTitle` VARCHAR(160) NOT NULL,
+  `photoId` VARCHAR(36) NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+  `salary` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  `allowances` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  `deductions` DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `Employee_applicationId_key` (`applicationId`),
+  UNIQUE INDEX `Employee_email_key` (`email`),
+  UNIQUE INDEX `Employee_photoId_key` (`photoId`),
+  INDEX `Employee_name_idx` (`name`),
+  INDEX `Employee_email_idx` (`email`),
+  CONSTRAINT `Employee_applicationId_fkey` FOREIGN KEY (`applicationId`) REFERENCES `JobApplication` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `Employee_photoId_fkey` FOREIGN KEY (`photoId`) REFERENCES `UploadedFile` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `EmployeeProject` (
+  `id` VARCHAR(36) NOT NULL,
+  `employeeId` VARCHAR(36) NOT NULL,
+  `projectId` VARCHAR(36) NOT NULL,
+  `assignedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `EmployeeProject_employeeId_projectId_key` (`employeeId`, `projectId`),
+  INDEX `EmployeeProject_projectId_idx` (`projectId`),
+  CONSTRAINT `EmployeeProject_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `Employee` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `EmployeeProject_projectId_fkey` FOREIGN KEY (`projectId`) REFERENCES `Project` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `EmployeeAttendance` (
+  `id` VARCHAR(36) NOT NULL,
+  `employeeId` VARCHAR(36) NOT NULL,
+  `date` DATE NOT NULL,
+  `status` VARCHAR(20) NOT NULL,
+  `notes` VARCHAR(500) NULL,
+  `markedBy` VARCHAR(36) NOT NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `EmployeeAttendance_employeeId_date_key` (`employeeId`, `date`),
+  INDEX `EmployeeAttendance_date_idx` (`date`),
+  CONSTRAINT `EmployeeAttendance_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `Employee` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `EmployeeDailyReport` (
+  `id` VARCHAR(36) NOT NULL,
+  `employeeId` VARCHAR(36) NOT NULL,
+  `projectId` VARCHAR(36) NULL,
+  `date` DATE NOT NULL,
+  `title` VARCHAR(160) NOT NULL,
+  `summary` TEXT NOT NULL,
+  `completed` TEXT NOT NULL,
+  `blockers` TEXT NULL,
+  `nextSteps` TEXT NULL,
+  `hours` DECIMAL(4, 2) NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'SUBMITTED',
+  `adminFeedback` TEXT NULL,
+  `reviewedBy` VARCHAR(36) NULL,
+  `reviewedAt` DATETIME(3) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `EmployeeDailyReport_employeeId_date_key` (`employeeId`, `date`),
+  INDEX `EmployeeDailyReport_projectId_idx` (`projectId`),
+  INDEX `EmployeeDailyReport_status_date_idx` (`status`, `date`),
+  CONSTRAINT `EmployeeDailyReport_employeeId_fkey` FOREIGN KEY (`employeeId`) REFERENCES `Employee` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `EmployeeDailyReport_projectId_fkey` FOREIGN KEY (`projectId`) REFERENCES `Project` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

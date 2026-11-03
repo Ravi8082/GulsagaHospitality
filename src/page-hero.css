@@ -1,0 +1,152 @@
+/*
+ * One hero format for every public page (Home, Membership, Destinations, Resorts,
+ * Experiences, Our Network, About Us, Contact). Loaded last so it wins over the
+ * page-specific stylesheets.
+ *
+ * Layout: [ header overlay ] -> 150px -> eyebrow / h1 / copy / actions -> 150px
+ * The top 150px comes from the shared `main > :first-child` rule in home.css; the
+ * bottom 150px is added here. Copy wrappers carry no vertical padding of their own.
+ */
+:root {
+  --hero-space: var(--page-edge-space, 150px);
+  --hero-width: 1320px;
+  --hero-gutter: 5%;
+}
+
+main
+  :is(
+    .home-hero,
+    .membership-hero,
+    .reference-destination-hero,
+    .resorts-hero,
+    .experience-hero,
+    .network-hero,
+    .about-hero,
+    .contact-hero
+  ) {
+  display: block;
+  height: auto;
+  min-height: 0;
+  padding-right: 0;
+  padding-bottom: var(--hero-space);
+  padding-left: 0;
+}
+
+main .experience-hero {
+  padding-bottom: 0;
+}
+
+main
+  :is(
+    .home-hero .hero-content,
+    .membership-hero-copy,
+    .reference-destination-hero-copy,
+    .resorts-hero-copy,
+    .experience-layout .experience-hero-inner,
+    .network-hero-content,
+    .about-hero-content,
+    .contact-hero-copy
+  ) {
+  position: relative;
+  z-index: 2;
+  width: min(var(--hero-width), 100%);
+  min-height: 0;
+  max-width: none;
+  margin: 0 auto;
+  padding: 0 var(--hero-gutter);
+}
+
+main .experience-layout .experience-hero-inner,
+main .experience-hero .experience-hero-inner {
+  padding-bottom: var(--hero-space);
+}
+
+main
+  :is(
+    .home-hero .hero-content,
+    .membership-hero-copy,
+    .reference-destination-hero-copy,
+    .resorts-hero-copy,
+    .experience-hero-inner > div:first-child,
+    .network-hero-content,
+    .about-hero-content,
+    .contact-hero-copy
+  )
+  h1 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(42px, 6vw, 82px);
+  line-height: 0.95;
+}
+
+main
+  :is(
+    .home-hero .hero-content,
+    .membership-hero-copy,
+    .reference-destination-hero-copy,
+    .resorts-hero-copy,
+    .experience-hero-inner,
+    .network-hero-content,
+    .about-hero-content,
+    .contact-hero-copy
+  )
+  :is(.eyebrow, .about-eyebrow, .contact-eyebrow) {
+  margin: 0 0 12px;
+  font-size:14px;
+  letter-spacing: 0.3em;
+}
+
+main
+  :is(
+    .home-hero .hero-copy,
+    .membership-hero-copy > p:not(.eyebrow, .membership-hero-terms),
+    .reference-destination-hero-copy > p:not(.eyebrow),
+    .resorts-hero-copy > p:not(.eyebrow),
+    .experience-hero-copy,
+    .network-hero-content > p:not(.eyebrow),
+    .about-hero-content > p:not(.about-eyebrow),
+    .contact-hero-copy > p:last-child
+  ) {
+  max-width: 520px;
+  margin: 18px 0 24px;
+  font-size:16px;
+  line-height: 1.6;
+}
+
+main
+  :is(
+    .hero-buttons,
+    .membership-hero-actions,
+    .reference-destination-hero-actions,
+    .resorts-hero-actions,
+    .experience-hero-actions,
+    .network-hero-actions,
+    .about-hero-actions
+  ) {
+  margin-top: 0;
+  gap: 20px;
+}
+
+main
+  :is(
+    .home-hero .hero-buttons > a:first-child,
+    .membership-hero-actions > a:first-child,
+    .reference-gold-button,
+    .resorts-gold-button,
+    .experience-hero-actions > a:first-child,
+    .network-gold-button,
+    .about-gold-button
+  ) {
+  min-height: 44px;
+  font-size:14px;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --hero-gutter: 6%;
+  }
+}
+
+/* Floating WhatsApp button (all pages using the shared Layout) */
+.whatsapp-fab { position: fixed; right: 24px; bottom: 24px; z-index: 60; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: #25d366; color: #fff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28); transition: transform 0.2s ease; }
+.whatsapp-fab:hover { transform: scale(1.08); }
