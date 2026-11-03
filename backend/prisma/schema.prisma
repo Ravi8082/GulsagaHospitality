@@ -135,6 +135,7 @@ model OtpVerification {
  @@index([email,purpose,createdAt])
  @@index([expiresAt])
  @@index([grantHash])
+ @@map("otpverification")
 }
 model JobPosting {
  id String @id @default(uuid()) @db.VarChar(36)
@@ -206,6 +207,7 @@ model UploadedFile {
  employeePhoto Employee? @relation("EmployeePhoto")
  experienceMedia ExperienceMedia[]
  createdAt DateTime @default(now())
+  @@map("uploadedfile")
 }
 model Employee {
  id String @id @default(uuid()) @db.VarChar(36)
@@ -299,6 +301,7 @@ model EmailNotification {
  acceptedAt DateTime?
  createdAt DateTime @default(now())
  @@index([state,availableAt])
+ @@map("emailnotification")
 }
 model ApplicationStatusHistory {
  id String @id @default(uuid()) @db.VarChar(36)
@@ -324,6 +327,7 @@ model PasswordReset {
  expiresAt DateTime
  used Boolean @default(false)
  createdAt DateTime @default(now())
+ @@map("passwordreset")
 }
 
 model CommunityUser {
@@ -410,6 +414,7 @@ model ExperienceMedia {
  displayOrder Int @default(0)
  createdAt DateTime @default(now())
  @@index([experienceId, displayOrder])
+  @@map("experiencemedia")
 }
 
 model ExperienceRating {
