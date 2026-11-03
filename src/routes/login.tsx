@@ -209,7 +209,8 @@ function LoginPage() {
                 {busy ? "Sending…" : "Send reset link"} <ArrowRight size={18} />
               </button>
               <p className="login-note">
-                Partner or member account? Ask your Gulsaga administrator to reset your access.
+                Admin and partner accounts: enter your sign-in email and we will send a reset link.
+                Members sign in with a one-time code instead.
               </p>
               <button type="button" className="login-switch" onClick={() => goTo("password")}>
                 Back to sign in
