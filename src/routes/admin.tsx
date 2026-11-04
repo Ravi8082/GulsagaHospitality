@@ -52,6 +52,11 @@ import { pageHead } from "@/lib/hotel-data";
 import { useHomeContent } from "@/lib/home-content";
 import { ChangeHistory } from "@/components/change-history";
 import { PartnerAdmin } from "@/components/partner-admin";
+import { PartnerItemsAdmin } from "@/components/partner-items-admin";
+import { MembersAdmin, BookingsAdmin, EnquiriesAdmin, ReportsAdmin, PartnerActivityAdmin, ReviewsAdmin, MediaAdmin, NotificationsAdmin, SettingsAdmin, PoliciesAdmin } from "@/components/admin-ops";
+import { AdminAlerts } from "@/components/admin-alerts";
+import { MembershipApplicationsAdmin } from "@/components/membership-applications-admin";
+import { MembershipCouponsAdmin } from "@/components/membership-coupons-admin";
 import { AdminAccounts } from "@/components/admin-accounts";
 import { RequireAuth } from "@/components/require-auth";
 import { NetworkPageAdminEditor } from "@/components/network-page-admin-editor";
@@ -77,6 +82,7 @@ const adminGroups = [
       { name: "Our Network", icon: Handshake },
       { name: "Website Links", icon: ArrowUpRight },
       { name: "Partners", icon: Handshake },
+      { name: "Partner activity", icon: Bell },
     ],
   },
   {
@@ -102,6 +108,7 @@ const adminGroups = [
       { name: "Reports & Analytics", icon: ChartNoAxesCombined },
       { name: "Team & Roles", icon: UserCog },
       { name: "Notifications", icon: Bell },
+      { name: "Terms & Policies", icon: Settings },
       { name: "Change History", icon: Settings },
       { name: "Settings", icon: Settings },
     ],
@@ -188,6 +195,7 @@ function Admin() {
               placeholder="Search resorts, members..."
             />
           </label>
+          <AdminAlerts onOpen={() => navigate("Bookings")} onActivity={() => navigate("Partner activity")} />
           <span
             className="preview-label"
             role="status"
@@ -235,12 +243,15 @@ function Admin() {
             <LiveContentManager collectionId="experience_catalog" />
             <ExperienceAdminPanel />
           </>
-        ) : tab === "Users & Members" || tab === "Memberships" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={Users}
-            detail="Member records are not connected in this website preview."
-          />
+        ) : tab === "Users & Members" ? (
+          <MembersAdmin />
+        ) : tab === "Memberships" ? (
+          <>
+            <MembershipApplicationsAdmin />
+            <MembershipCouponsAdmin />
+          </>
+        ) : tab === "Bookings" ? (
+          <BookingsAdmin />
         ) : tab === "Our Network" ? (
           <>
             <NetworkPageAdminEditor />
@@ -249,17 +260,18 @@ function Admin() {
         ) : tab === "WhatsApp" ? (
           <WhatsAppAdmin />
         ) : tab === "Partners" ? (
-          <PartnerAdmin />
+          <>
+            <PartnerAdmin />
+            <PartnerItemsAdmin />
+          </>
+        ) : tab === "Partner activity" ? (
+          <PartnerActivityAdmin onNavigate={navigate} />
         ) : tab === "Change History" ? (
           <ChangeHistory />
         ) : tab === "Website Links" ? (
           <LiveContentManager collectionId="site_links" />
         ) : tab === "Enquiries (CRM)" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={MessageSquare}
-            detail="Contact forms open email drafts; enquiries are not stored in a CRM."
-          />
+          <EnquiriesAdmin />
         ) : tab === "Pages & Banners" ? (
           <AdminModuleEmpty
             title={tab}
@@ -267,43 +279,24 @@ function Admin() {
             detail="Use the page-specific editors to update the website preview."
           />
         ) : tab === "Media Library" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={Image}
-            detail="Uploaded media is held in the current browser session only."
-          />
+          <MediaAdmin />
         ) : tab === "Reviews & Ratings" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={Star}
-            detail="No verified review service is connected."
-          />
+          <ReviewsAdmin />
         ) : tab === "Marketing & Offers" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={Tags}
-            detail="Membership offers can be edited in the Membership section."
-          />
+          <>
+            <MembershipCouponsAdmin />
+            <PartnerItemsAdmin />
+          </>
         ) : tab === "Reports & Analytics" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={ChartNoAxesCombined}
-            detail="Booking, payment and engagement analytics are not connected."
-          />
+          <ReportsAdmin />
         ) : tab === "Team & Roles" ? (
           <AdminAccounts />
         ) : tab === "Settings" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={Shield}
-            detail="Role-based access controls must be enforced by the production backend."
-          />
+          <SettingsAdmin onNavigate={navigate} />
+        ) : tab === "Terms & Policies" ? (
+          <PoliciesAdmin />
         ) : tab === "Notifications" ? (
-          <AdminModuleEmpty
-            title={tab}
-            icon={Bell}
-            detail="No notification delivery provider is connected."
-          />
+          <NotificationsAdmin onNavigate={navigate} />
         ) : (
           <>
             <div className="section-heading">

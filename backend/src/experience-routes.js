@@ -1,14 +1,24 @@
+import { randomInt } from "node:crypto";
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
 import { z } from "zod";
 import { config } from "./config.js";
+import { backsFor } from "./member-backs.js";
+import { recordAcceptance } from "./policies.js";
 import { sendNow, template } from "./email.js";
 import { fail, hash, makeOtp, equal, can } from "./security.js";
 import { signToken, bearerToken, verifyToken } from "./jwt.js";
 
 const emailSchema = z.string().trim().toLowerCase().email().max(255);
 const uuidSchema = z.string().uuid();
+const passwordSchema = z
+  .string()
+  .min(10, "Use at least 10 characters.")
+  .max(128)
+  .regex(/[A-Za-z]/, "Include a letter.")
+  .regex(/\d/, "Include a number.");
 const ratingSchema = z.number().int().min(1).max(5);
 const contentSchema = z
   .object({
@@ -169,6 +179,74 @@ async function ratedExperienceDTOs(db, rows) {
   );
 }
 
+const membershipApplySchema = z
+  .object({
+    fullName: z.string().trim().min(2).max(100),
+    phone: z.string().trim().regex(/^[0-9+()\-\s]{7,20}$/, "Enter a valid mobile number."),
+    city: z.string().trim().min(2).max(100),
+    plan: z.string().trim().min(2).max(60),
+    listAmount: z.number().int().min(0).max(100000000).nullable().optional(),
+    years: z.number().int().min(1).max(20).default(5),
+    country: z.string().trim().max(60).optional(),
+    familyMembers: z.number().int().min(1).max(20).optional(),
+    destinations: z.string().trim().max(500).optional(),
+    travelFrequency: z.string().trim().max(60).optional(),
+    requirements: z.string().trim().max(1000).optional(),
+    couponCode: z.string().trim().max(40).optional(),
+    acceptedTerms: z.boolean(),
+  })
+  .strict();
+
+const couponLimit = rateLimit({ windowMs: 15 * 60000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
+
+async function findUsableCoupon(db, raw) {
+  const code = String(raw ?? "").trim().toUpperCase();
+  const coupon = /^[A-Z0-9_-]{3,40}$/.test(code) ? await db.membershipCoupon.findUnique({ where: { code } }) : null;
+  const usable =
+    coupon &&
+    coupon.active &&
+    (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+    (coupon.maxUses == null || coupon.usedCount < coupon.maxUses);
+  if (!usable) throw fail(400, "This coupon code is invalid or has expired.");
+  return coupon;
+}
+
+async function newMemberCode(db) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const code = `GHPM${String(randomInt(10000, 100000))}`;
+    if (!(await db.membershipApplication.findUnique({ where: { memberCode: code } }))) return code;
+  }
+  throw fail(500, "Could not create a member ID. Please try again.");
+}
+
+function finalAmount(row) {
+  if (row.listAmount == null) return null;
+  return Math.round((row.listAmount * (100 - row.discountPercent)) / 100);
+}
+
+function membershipDTO(row) {
+  const validTill =
+    row.status === "ACTIVE" && row.decidedAt
+      ? new Date(new Date(row.decidedAt).setFullYear(new Date(row.decidedAt).getFullYear() + row.years))
+      : null;
+  return {
+    id: row.id,
+    fullName: row.fullName,
+    plan: row.plan,
+    status: row.status,
+    memberCode: row.memberCode,
+    paymentLink: row.status === "APPROVED" ? row.paymentLink : null,
+    adminNote: row.adminNote,
+    listAmount: row.listAmount,
+    discountPercent: row.discountPercent,
+    discountNote: row.discountNote,
+    finalAmount: finalAmount(row),
+    years: row.years,
+    validTill,
+    createdAt: row.createdAt,
+  };
+}
+
 function authenticatedMember(db) {
   return async (req, res, next) => {
     try {
@@ -233,6 +311,7 @@ function makeOtpService({ db, otpLimit, newsletterOnly = false, sendEmail = send
 
     const code = makeOtp();
     sendLocks.add(email);
+    let devCode;
     try {
       await sendEmail(
         email,
@@ -242,7 +321,12 @@ function makeOtpService({ db, otpLimit, newsletterOnly = false, sendEmail = send
         ),
       );
     } catch {
-      return jsonResponse(res, 503, "Email delivery is not configured or available. Try again later.");
+      if (config.production) {
+        return jsonResponse(res, 503, "Email delivery is not configured or available. Try again later.");
+      }
+      // Development only: no mail provider is configured, so the code is returned to the page and logged.
+      console.warn(`[dev] Verification code for ${email}: ${code}`);
+      devCode = code;
     } finally {
       sendLocks.delete(email);
     }
@@ -262,6 +346,7 @@ function makeOtpService({ db, otpLimit, newsletterOnly = false, sendEmail = send
       message: "If email delivery is configured, a verification code has been sent.",
       expiresIn: lifetimeMs / 1000,
       resendAfter: cooldownMs / 1000,
+      ...(devCode ? { devCode } : {}),
     });
   });
 
@@ -323,10 +408,42 @@ function makeOtpService({ db, otpLimit, newsletterOnly = false, sendEmail = send
           displayName: req.communityUser.displayName,
           email: req.communityUser.email,
           memberVerified: Boolean(req.communityUser.memberVerified),
+          hasPassword: Boolean(req.communityUser.passwordHash),
           joinedAt: req.communityUser.createdAt,
         },
       }),
     );
+    router.post("/password", authenticatedMember(db), async (req, res) => {
+      const data = z.object({ password: passwordSchema }).strict().parse(req.body);
+      await db.communityUser.update({
+        where: { id: req.communityUser.id },
+        data: { passwordHash: await bcrypt.hash(data.password, 12) },
+      });
+      res.json({ message: "Password saved. You can now sign in with your email and password." });
+    });
+    router.post("/password-login", async (req, res) => {
+      const data = z
+        .object({ email: emailSchema, password: z.string().min(1).max(200) })
+        .strict()
+        .parse(req.body);
+      const user = await db.communityUser.findUnique({ where: { email: data.email } });
+      const valid = await bcrypt.compare(
+        data.password,
+        user?.passwordHash || "$2b$12$1jOC05eoEJhhBTTDHXeQfeDbTmULoSKGHJSYXHb35RKLYBU3OV6H.",
+      );
+      if (!user?.passwordHash || !valid) throw fail(401, "Invalid email or password.");
+      if (!user.enabled) throw fail(403, "This account is currently disabled.");
+      await new Promise((resolve, reject) =>
+        req.session.regenerate((error) => (error ? reject(error) : resolve())),
+      );
+      req.session.communityUserId = user.id;
+      res.json({
+        message: "Signed in.",
+        user: { id: user.id, displayName: user.displayName, memberVerified: user.memberVerified },
+        csrfToken: req.apiCsrfToken,
+        token: signToken({ sub: user.id, typ: "member" }),
+      });
+    });
     router.post("/logout", authenticatedMember(db), async (req, res) => {
       await new Promise((resolve, reject) =>
         req.session.destroy((error) => (error ? reject(error) : resolve())),
@@ -447,6 +564,101 @@ export function createExperienceRouter({ db, sql, audit, saveFile, readFile, rem
       orderBy: { createdAt: "desc" },
     });
     res.json(rows.map(experienceDTO));
+  });
+
+  router.post("/membership/coupon/check", couponLimit, async (req, res) => {
+    const { code } = z.object({ code: z.string().trim().max(40) }).strict().parse(req.body);
+    const coupon = await findUsableCoupon(db, code);
+    res.json({ code: coupon.code, percent: coupon.percent, note: coupon.note });
+  });
+
+  router.get("/membership/me", member, async (req, res) => {
+    const row = await db.membershipApplication.findUnique({ where: { userId: req.communityUser.id } });
+    res.json({ membership: row ? membershipDTO(row) : null });
+  });
+
+  // Approved partner offers on live properties, shown to active members only.
+  router.get("/member/offers", member, async (req, res) => {
+    const row = await db.membershipApplication.findUnique({ where: { userId: req.communityUser.id } });
+    if (!row || row.status !== "ACTIVE") return res.json({ active: false, rows: [] });
+    const items = await sql("partner_items as i")
+      .join("resorts as r", "r.id", "i.resort_id")
+      .where({ "i.kind": "offer", "i.status": "APPROVED", "r.listed": true })
+      .orderBy("i.id", "desc")
+      .limit(50)
+      .select("i.id", "i.title", "i.data", "r.name as resort", "r.location");
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = items
+      .map((i) => ({ id: i.id, title: i.title, resort: i.resort, location: i.location, ...JSON.parse(i.data) }))
+      .filter((o) => (!o.validTo || o.validTo >= today) && (!o.validFrom || o.validFrom <= today));
+    res.json({ active: true, rows });
+  });
+
+  // Bookings the property recorded against the phone number on the member's application.
+  router.get("/member/bookings", member, async (req, res) => {
+    const row = await db.membershipApplication.findUnique({ where: { userId: req.communityUser.id } });
+    const digits = (row?.phone ?? "").replace(/\D/g, "").slice(-10);
+    if (digits.length < 10) return res.json({ rows: [] });
+    const rows = await sql("partner_bookings as b")
+      .leftJoin("resorts as r", "r.id", "b.resort_id")
+      .whereRaw("RIGHT(REGEXP_REPLACE(b.guest_contact, '[^0-9]', ''), 10) = ?", [digits])
+      .orderBy("b.check_in", "desc")
+      .limit(50)
+      .select(
+        "b.id", "b.status", "b.guests", "b.amount", "r.name as resort", "r.location",
+        sql.raw("DATE_FORMAT(b.check_in, '%Y-%m-%d') AS checkIn"),
+        sql.raw("DATE_FORMAT(b.check_out, '%Y-%m-%d') AS checkOut"),
+      );
+    res.json({ rows });
+  });
+
+  router.get("/member/backs", member, async (req, res) => {
+    res.json(await backsFor(sql, req.communityUser.id));
+  });
+
+  router.post("/membership/apply", member, async (req, res) => {
+    const data = membershipApplySchema.parse(req.body);
+    if (data.acceptedTerms !== true) throw fail(400, "Please accept the Terms & Conditions and Privacy Policy to continue.");
+    const existing = await db.membershipApplication.findUnique({ where: { userId: req.communityUser.id } });
+    if (existing && ["PENDING", "APPROVED", "ACTIVE"].includes(existing.status)) {
+      throw fail(409, "You already have a membership request. Contact support to change your plan.");
+    }
+    let coupon = null;
+    if (data.couponCode) {
+      coupon = await findUsableCoupon(db, data.couponCode);
+      const taken = await db.membershipCoupon.updateMany({
+        where: { id: coupon.id, OR: [{ maxUses: null }, { usedCount: { lt: coupon.maxUses ?? 0 } }] },
+        data: { usedCount: { increment: 1 } },
+      });
+      if (taken.count !== 1) throw fail(400, "This coupon code is invalid or has expired.");
+    }
+    const fields = {
+      fullName: data.fullName,
+      phone: data.phone,
+      city: data.city,
+      plan: data.plan,
+      listAmount: data.listAmount ?? null,
+      discountPercent: coupon ? coupon.percent : 0,
+      discountNote: coupon ? `Coupon ${coupon.code}${coupon.note ? ` - ${coupon.note}` : ""}`.slice(0, 200) : null,
+      years: data.years,
+      country: data.country ?? null,
+      familyMembers: data.familyMembers ?? null,
+      destinations: data.destinations ?? null,
+      travelFrequency: data.travelFrequency ?? null,
+      requirements: data.requirements ?? null,
+      status: "PENDING",
+      paymentLink: null,
+      adminNote: null,
+      decidedAt: null,
+    };
+    const row = existing
+      ? await db.membershipApplication.update({ where: { id: existing.id }, data: fields })
+      : await db.membershipApplication.create({ data: { ...fields, userId: req.communityUser.id } });
+    await recordAcceptance({ db, sql }, {
+      context: "membership", name: data.fullName, email: req.communityUser.email, phone: data.phone,
+      reference: row.id, accepted: true, req, adminTo: config.COMPANY_NOTIFICATION_EMAIL,
+    }).catch((e) => console.error("acceptance record failed", e.message));
+    res.status(201).json({ membership: membershipDTO(row) });
   });
 
   router.get("/notifications", member, async (req, res) => {
@@ -1085,6 +1297,126 @@ export function createExperienceAdminRouter({ db, sql, audit, readFile }) {
       return updated;
     });
     res.json(adminExperienceDTO(row));
+  });
+
+  router.get("/membership/applications", async (req, res) => {
+    const rows = await db.membershipApplication.findMany({
+      include: { user: { select: { email: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+    res.json(
+      rows.map((row) => ({
+        ...membershipDTO(row),
+        paymentLink: row.paymentLink,
+        email: row.user.email,
+        phone: row.phone,
+        city: row.city,
+        country: row.country,
+        familyMembers: row.familyMembers,
+        destinations: row.destinations,
+        travelFrequency: row.travelFrequency,
+        requirements: row.requirements,
+      })),
+    );
+  });
+
+  router.patch("/membership/applications/:id", async (req, res) => {
+    const id = uuidSchema.parse(req.params.id);
+    const data = z
+      .object({
+        status: z.enum(["PENDING", "APPROVED", "ACTIVE", "REJECTED"]).optional(),
+        paymentLink: z.string().trim().max(500).optional(),
+        adminNote: z.string().trim().max(500).optional(),
+        listAmount: z.number().int().min(0).max(100000000).nullable().optional(),
+        discountPercent: z.number().int().min(0).max(100).optional(),
+        discountNote: z.string().trim().max(200).optional(),
+      })
+      .strict()
+      .parse(req.body);
+    const current = await db.membershipApplication.findUnique({ where: { id } });
+    if (!current) throw fail(404, "Membership request not found.");
+    const status = data.status ?? current.status;
+    const memberCode = status === "ACTIVE" ? current.memberCode || (await newMemberCode(db)) : current.memberCode;
+    const row = await db.membershipApplication.update({
+      where: { id },
+      data: {
+        status,
+        memberCode,
+        paymentLink: data.paymentLink ?? current.paymentLink,
+        adminNote: data.adminNote ?? current.adminNote,
+        listAmount: data.listAmount === undefined ? current.listAmount : data.listAmount,
+        discountPercent: data.discountPercent ?? current.discountPercent,
+        discountNote: data.discountNote ?? current.discountNote,
+        decidedAt: data.status ? new Date() : current.decidedAt,
+      },
+    });
+    await audit(db, req.user, "UPDATE_MEMBERSHIP_APPLICATION", id);
+    res.json(membershipDTO(row));
+  });
+
+  const couponBody = z
+    .object({
+      code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,40}$/, "Use 3-40 letters, numbers, - or _."),
+      percent: z.number().int().min(1).max(100),
+      note: z.string().trim().max(200).optional(),
+      expiresAt: z.string().datetime().nullable().optional(),
+      maxUses: z.number().int().min(1).max(1000000).nullable().optional(),
+      active: z.boolean().optional(),
+    })
+    .strict();
+
+  router.get("/membership/coupons", async (req, res) => {
+    res.json(await db.membershipCoupon.findMany({ orderBy: { createdAt: "desc" }, take: 200 }));
+  });
+
+  router.post("/membership/coupons", async (req, res) => {
+    const data = couponBody.parse(req.body);
+    if (await db.membershipCoupon.findUnique({ where: { code: data.code } })) throw fail(409, "This coupon code already exists.");
+    const row = await db.membershipCoupon.create({
+      data: {
+        code: data.code,
+        percent: data.percent,
+        note: data.note || null,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : null,
+        maxUses: data.maxUses ?? null,
+        active: data.active ?? true,
+      },
+    });
+    await audit(db, req.user, "CREATE_MEMBERSHIP_COUPON", row.id);
+    res.status(201).json(row);
+  });
+
+  router.patch("/membership/coupons/:id", async (req, res) => {
+    const id = uuidSchema.parse(req.params.id);
+    const data = couponBody.partial().parse(req.body);
+    const row = await db.membershipCoupon.update({
+      where: { id },
+      data: {
+        ...(data.code ? { code: data.code } : {}),
+        ...(data.percent ? { percent: data.percent } : {}),
+        ...(data.note !== undefined ? { note: data.note || null } : {}),
+        ...(data.expiresAt !== undefined ? { expiresAt: data.expiresAt ? new Date(data.expiresAt) : null } : {}),
+        ...(data.maxUses !== undefined ? { maxUses: data.maxUses } : {}),
+        ...(data.active !== undefined ? { active: data.active } : {}),
+      },
+    });
+    await audit(db, req.user, "UPDATE_MEMBERSHIP_COUPON", id);
+    res.json(row);
+  });
+
+  router.delete("/membership/coupons/:id", async (req, res) => {
+    const id = uuidSchema.parse(req.params.id);
+    await db.membershipCoupon.delete({ where: { id } });
+    await audit(db, req.user, "DELETE_MEMBERSHIP_COUPON", id);
+    res.json({ message: "Coupon deleted." });
+  });
+
+  router.delete("/membership/applications/:id", async (req, res) => {
+    const id = uuidSchema.parse(req.params.id);
+    await db.membershipApplication.delete({ where: { id } });
+    await audit(db, req.user, "DELETE_MEMBERSHIP_APPLICATION", id);
+    res.json({ message: "Membership request deleted." });
   });
 
   router.patch("/members/:id/verification", async (req, res) => {

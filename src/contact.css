@@ -620,3 +620,27 @@
     transition: none;
   }
 }
+
+.contact-form-card label.contact-terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 14px 0 4px;
+  color: #233247;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.contact-form-card label.contact-terms input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #c99a3b;
+}
+
+.contact-form-card label.contact-terms a {
+  color: #0f2747;
+  font-weight: 700;
+  text-decoration: underline;
+}

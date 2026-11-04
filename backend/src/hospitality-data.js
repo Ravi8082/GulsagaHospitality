@@ -253,6 +253,7 @@ export async function getPublicHospitality({ sql, db }) {
         const collection = collections[name];
         const query = sql(collection.table).select("*").orderBy("sort_order", "asc");
         if (publishedCollections.includes(name)) query.where({ published: true });
+        if (name === "resorts") query.where({ listed: true });
         return [name, await query];
       }),
     ),

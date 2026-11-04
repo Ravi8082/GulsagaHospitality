@@ -19,6 +19,7 @@ import {
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/hotel-layout";
+import { DestinationPitch } from "@/components/destination-pitch";
 import { PreviewImage } from "@/components/preview-image";
 import { useHomeContent, type HomeMedia } from "@/lib/home-content";
 import { pageHead } from "@/lib/hotel-data";
@@ -223,6 +224,7 @@ function ResortDetails() {
 
         <main className="resort-detail-content">
           <div className="resort-detail-primary">
+            <DestinationPitch place={`${resort.region} ${resort.location}`} />
             <section className="resort-detail-section" id="overview">
               <p className="eyebrow">A GULSAGA STAY</p>
               <h2>The {resort.name} experience</h2>

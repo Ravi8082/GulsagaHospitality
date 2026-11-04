@@ -1,10 +1,15 @@
 // Floating WhatsApp button shown on every page that uses the shared Layout.
 // Opens a chat with the business number; the OpenWA bot on the backend answers automatically.
-const WHATSAPP_NUMBER = (import.meta.env.VITE_WHATSAPP_NUMBER || "917304645336").replace(/\D/g, "");
-const WHATSAPP_TEXT = "Hello Gulsaga, I would like to know more.";
+import { useHomeContent } from "@/lib/home-content";
+
+const FALLBACK_NUMBER = (import.meta.env['VITE_WHATSAPP_NUMBER'] || "917304645336").replace(/\D/g, "");
+const DEFAULT_TEXT = "Hello Gulsaga, I would like to know more.";
 
 export function WhatsAppButton() {
-  const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_TEXT)}`;
+  const { footerContent, membershipPageContent } = useHomeContent();
+  const number = footerContent.whatsappNumber.replace(/\D/g, "") || FALLBACK_NUMBER;
+  const text = membershipPageContent.whatsappMessage?.trim() || DEFAULT_TEXT;
+  const href = `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
   return (
     <a
       className="whatsapp-fab"

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/hotel-layout";
+import { DestinationPitch } from "@/components/destination-pitch";
 import { PreviewImage } from "@/components/preview-image";
 import { useHomeContent } from "@/lib/home-content";
 import type { HomeMedia } from "@/lib/home-content";
@@ -207,6 +208,10 @@ function DestinationDetails() {
             </div>
           </section>
         ) : null}
+
+        <section className="dd-section">
+          <DestinationPitch place={destination.name} />
+        </section>
 
         <section className="dd-section" id="dd-resorts">
           <div className="dd-head-row">

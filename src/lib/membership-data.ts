@@ -15,7 +15,123 @@ export type MembershipStep = {
   description: string;
 };
 
+export type MembershipPlan = {
+  id: string;
+  name: string;
+  priceInr: number;
+  years: number;
+  features: string[];
+  badge: string;
+  cta: string;
+  contactOnly: boolean;
+  image?: string;
+  tagline?: string;
+};
+
+export const defaultMembershipPlans: MembershipPlan[] = [
+  {
+    id: "premium",
+    name: "Premium",
+    priceInr: 200000,
+    years: 5,
+    image: "/membership/premium.jpg",
+    features: ["Up to 10 Resort Stays", "Access to Partner Resorts", "Member Exclusive Offers", "Priority Bookings"],
+    badge: "",
+    cta: "Choose Plan",
+    contactOnly: false,
+  },
+  {
+    id: "platinum",
+    name: "Platinum",
+    priceInr: 350000,
+    years: 5,
+    image: "/membership/platinum.jpg",
+    features: ["Up to 20 Resort Stays", "Art & Creative Residences", "Destination Wedding Access", "50% Back (Travel Credits)", "Dedicated Membership Advisor"],
+    badge: "Most Popular",
+    cta: "Choose Plan",
+    contactOnly: false,
+  },
+  {
+    id: "elite",
+    name: "Elite",
+    priceInr: 500000,
+    years: 5,
+    image: "/membership/elite.jpg",
+    features: ["Unlimited Resort Stays*", "Priority Event Access", "Complimentary Upgrades", "50% Back (Higher Value)", "Family Coverage (Up to 6)"],
+    badge: "",
+    cta: "Choose Plan",
+    contactOnly: false,
+  },
+  {
+    id: "custom",
+    name: "Custom",
+    priceInr: 0,
+    years: 5,
+    image: "/membership/custom.jpg",
+    tagline: "Tailored for You",
+    features: ["Personalized Benefits", "Flexible Duration", "Group / Corporate Plans", "Special Requirements", "Dedicated Relationship Manager"],
+    badge: "",
+    cta: "Enquire Now",
+    contactOnly: true,
+  },
+];
+
+export type DestinationPitch = {
+  id: string;
+  name: string;
+  tagline: string;
+  nearby: string[];
+  activities: string[];
+};
+
+export const defaultDestinationPitches: DestinationPitch[] = [
+  {
+    id: "goa",
+    name: "Goa",
+    tagline: "Sun, sand and slow evenings - made effortless for members.",
+    nearby: ["Baga & Calangute beaches", "Fort Aguada", "Basilica of Bom Jesus", "Dudhsagar Falls"],
+    activities: ["Sunset cruise", "Water sports", "Old Goa heritage walk", "Spice plantation lunch"],
+  },
+  {
+    id: "kerala",
+    name: "Kerala",
+    tagline: "Backwaters, hills and ayurveda at your own pace.",
+    nearby: ["Alleppey backwaters", "Munnar tea gardens", "Kovalam beach", "Periyar wildlife reserve"],
+    activities: ["Houseboat stay", "Ayurvedic spa", "Tea estate tour", "Kathakali evening"],
+  },
+  {
+    id: "rajasthan",
+    name: "Rajasthan",
+    tagline: "Palaces, forts and desert nights.",
+    nearby: ["Amer Fort", "City Palace Udaipur", "Lake Pichola", "Jaisalmer dunes"],
+    activities: ["Camel safari", "Palace dining", "Folk music night", "Heritage city tour"],
+  },
+  {
+    id: "himachal",
+    name: "Himachal",
+    tagline: "Mountain air, snow and quiet getaways.",
+    nearby: ["Mall Road Shimla", "Solang Valley", "Rohtang Pass", "Kasol & Parvati valley"],
+    activities: ["Paragliding", "Snow trek", "River rafting", "Cafe hopping"],
+  },
+];
+
+export const findDestinationPitch = (pitches: DestinationPitch[], place: string) => {
+  const needle = place.trim().toLowerCase();
+  if (!needle) return undefined;
+  return pitches.find((pitch) => {
+    const name = pitch.name.trim().toLowerCase();
+    return name && (needle.includes(name) || name.includes(needle));
+  });
+};
+export const formatInr = (amount: number) => `₹${new Intl.NumberFormat("en-IN").format(amount)}`;
 export type MembershipPageContent = {
+  tiers?: MembershipPlan[];
+  destinationPitches?: DestinationPitch[];
+  destinationPitchCta?: string;
+  whatsappMessage?: string;
+  offerText?: string;
+  plansHeading?: string;
+  plansNote?: string;
   eyebrow: string;
   heading: string;
   highlight: string;
@@ -145,16 +261,16 @@ export const initialMembershipPageContent: MembershipPageContent = {
     "Stays at 5-star hotels and our own or associate properties, subject to availability",
     "Dedicated concierge support for planning every holiday",
   ],
-  price: "₹5,50,000",
+  price: "â‚¹5,50,000",
   taxNote: "+ GST",
-  downPaymentLabel: "Down payment · 30%",
-  downPayment: "₹1,65,000",
+  downPaymentLabel: "Down payment Â· 30%",
+  downPayment: "â‚¹1,65,000",
   balanceLabel: "Balance",
-  balance: "₹3,85,000",
+  balance: "â‚¹3,85,000",
   quarterlyLabel: "4 quarterly instalments",
-  quarterlyPayment: "₹96,250",
+  quarterlyPayment: "â‚¹96,250",
   monthlyLabel: "12 monthly instalments",
-  monthlyPayment: "₹32,083.33",
+  monthlyPayment: "â‚¹32,083.33",
   pricingNote:
     "Balance paid within one year. Monthly final instalment adjusted for rounding. Final schedule and benefits follow your signed agreement. Online payment is not available in this preview.",
   timelineHeading: "A five-year holiday journey",
@@ -204,3 +320,4 @@ export const initialMembershipPageContent: MembershipPageContent = {
 };
 
 export const initialMembershipOfferMedia = image("Membership offer resort", resortPool);
+

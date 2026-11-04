@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -17,6 +18,8 @@ import resort from "@/assets/destinations/resort-pool.jpg";
 import { initialDestinations, type Destination } from "@/lib/destination-data";
 import { hotels } from "@/lib/hotel-data";
 import { initialNetworkPartners } from "@/lib/partner-data";
+import { apiRequest } from "@/lib/experience-api";
+import { isLiveEntry, mergeLive, type LiveProperty } from "@/lib/partner-live";
 import {
   initialResortPageContent,
   initialResorts,
@@ -80,6 +83,14 @@ export type ExperiencePageContent = {
   heroHighlight: string;
   heroDescription: string;
   heroMedia: HomeMedia;
+  dashboardEyebrow: string;
+  dashboardTitle: string;
+  dashboardHighlight: string;
+  dashboardDescription: string;
+  dashboardCta: string;
+  dashboardEmptyTitle: string;
+  dashboardEmptyText: string;
+  dashboardMedia: HomeMedia | null;
 };
 
 export type AdminDashboardContent = {
@@ -276,6 +287,14 @@ export const initialExperiencePageContent: ExperiencePageContent = {
   heroDescription:
     "Discover authentic experiences shared by our members from their holidays, art residencies and destination weddings.",
   heroMedia: image("Member experiences hero", destinationHero),
+  dashboardEyebrow: "YOUR MEMBER SPACE",
+  dashboardTitle: "My",
+  dashboardHighlight: "Experiences.",
+  dashboardDescription: "Follow every story from the moment you share it to the day it goes live.",
+  dashboardCta: "Add New Experience",
+  dashboardEmptyTitle: "Your first story belongs here.",
+  dashboardEmptyText: "Share a stay, a creative retreat or a celebration with the Gulsaga community.",
+  dashboardMedia: null,
 };
 
 export const initialAdminDashboardContent: AdminDashboardContent = {
@@ -758,11 +777,13 @@ export function HomeContentProvider({ children }: { children: ReactNode }) {
     initialDestinationPageContent,
     persistence,
   );
-  const [experiencesPageContent, updateExperiencesPageContent] = usePersisted(
+  const [experiencesStored, updateExperiencesPageContent] = usePersisted(
     "experiencePage",
     initialExperiencePageContent,
     persistence,
   );
+  // Older saved content has no dashboard fields yet, so fill them from the defaults.
+  const experiencesPageContent = { ...initialExperiencePageContent, ...experiencesStored };
   const [adminDashboardContent, updateAdminDashboardContent] = usePersisted(
     "adminDashboard",
     initialAdminDashboardContent,
@@ -810,6 +831,50 @@ export function HomeContentProvider({ children }: { children: ReactNode }) {
       (hidden) => hidden === id || (id.startsWith("/") && id.startsWith(`${hidden}/`)),
     );
   const previewUrls = useRef<string[]>([]);
+  const [live, setLive] = useState<LiveProperty[]>([]);
+
+  useEffect(() => {
+    void apiRequest<{ rows: LiveProperty[] }>("public/partner-properties")
+      .then(({ data }) => setLive(data.rows))
+      .catch(() => undefined);
+  }, []);
+
+  // Published partner properties are shown on the public pages but never saved into the editable content.
+  const liveNames = new Set(live.map((item) => item.name.toLowerCase()));
+  const merged = useMemo(
+    () => mergeLive({ resorts, destinations, partners: content.network.partners }, live),
+    [resorts, destinations, content.network.partners, live],
+  );
+  const shownContent = useMemo(
+    () => ({ ...content, network: { ...content.network, partners: merged.partners } }),
+    [content, merged.partners],
+  );
+  const saveContent = (next: HomeContent) =>
+    updateContent({
+      ...next,
+      network: {
+        ...next.network,
+        partners: next.network.partners.filter((item) => !isLiveEntry(item.id)),
+      },
+    });
+  const saveResorts = (next: Resort[]) =>
+    updateResorts(next.filter((item) => !isLiveEntry(item.id)));
+  const saveDestinations = (next: Destination[]) =>
+    updateDestinations(
+      next
+        .filter((item) => !isLiveEntry(item.id))
+        .map((item) =>
+          item.detail?.stays
+            ? {
+                ...item,
+                detail: {
+                  ...item.detail,
+                  stays: item.detail.stays.filter((stay) => !liveNames.has(stay.name.toLowerCase())),
+                },
+              }
+            : item,
+        ),
+    );
 
   useEffect(
     () => () => {
@@ -837,8 +902,8 @@ export function HomeContentProvider({ children }: { children: ReactNode }) {
         isHidden,
         loginPageContent,
         updateLoginPageContent,
-        content,
-        updateContent,
+        content: shownContent,
+        updateContent: saveContent,
         footerContent,
         updateFooterContent,
         contactPageContent,
@@ -853,12 +918,12 @@ export function HomeContentProvider({ children }: { children: ReactNode }) {
         updateAdminDashboardContent,
         networkPageContent,
         updateNetworkPageContent,
-        destinations,
-        updateDestinations,
+        destinations: merged.destinations,
+        updateDestinations: saveDestinations,
         resortPageContent,
         updateResortPageContent,
-        resorts,
-        updateResorts,
+        resorts: merged.resorts,
+        updateResorts: saveResorts,
         membershipPageContent,
         updateMembershipPageContent,
         membershipOfferMedia,

@@ -74,7 +74,7 @@ function Index() {
             <p className="hero-copy">{hero.description}</p>
             <div className="hero-buttons">
               <Button size="lg" asChild>
-                <Link to="/membership">
+                <Link to="/membership/join">
                   {hero.primaryLabel} <ArrowRight />
                 </Link>
               </Button>
@@ -195,7 +195,7 @@ function Index() {
               );
             })}
             <Button size="lg" asChild>
-              <Link to="/membership">
+              <Link to="/membership/join">
                 {membership.cta} <ArrowRight />
               </Link>
             </Button>
@@ -239,7 +239,7 @@ function Index() {
               ))}
             </ul>
             <Button size="lg" asChild>
-              <Link to="/membership">
+              <Link to="/membership/join">
                 {membership.cta} <ArrowRight />
               </Link>
             </Button>

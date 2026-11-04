@@ -46,8 +46,14 @@
 }
 
 .footer-content {
-  padding: 10px 4.5% 22px;
+  padding: 150px 4.5% 22px;
   background: radial-gradient(ellipse at 50% 0, rgb(21 54 74 / 50%), transparent 58%), #061c2b;
+}
+
+@media (max-width: 900px) {
+  .footer-content {
+    padding-top: 40px;
+  }
 }
 
 .footer-grid {

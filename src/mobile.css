@@ -1,0 +1,135 @@
+/*
+ * Mobile-only clean look (phones). Loaded last, desktop is untouched.
+ * Rule of thumb: headline + one clear action per section; long supporting copy is hidden.
+ */
+@media (max-width: 700px) {
+  :root {
+    --hero-space: 44px;
+    --page-edge-space: 84px;
+  }
+
+  /* ---------- Hero sections: eyebrow, title, one button ---------- */
+  main
+    :is(
+      .home-hero .hero-content,
+      .membership-hero-copy,
+      .reference-destination-hero-copy,
+      .resorts-hero-copy,
+      .network-hero-content,
+      .about-hero-content,
+      .contact-hero-copy,
+      .experience-hero-inner
+    )
+    h1 {
+    max-width: 100%;
+    font-size: clamp(36px, 10.5vw, 46px);
+    line-height: 1.06;
+  }
+
+  main
+    :is(
+      .home-hero .hero-content,
+      .membership-hero-copy,
+      .reference-destination-hero-copy,
+      .resorts-hero-copy,
+      .network-hero-content,
+      .about-hero-content,
+      .contact-hero-copy,
+      .experience-hero-inner > div:first-child
+    )
+    > p:not(.eyebrow):not(.about-eyebrow):not(.contact-eyebrow) {
+    display: none;
+  }
+
+  main .home-hero {
+    padding-bottom: 48px;
+  }
+
+  main .home-hero .hero-content {
+    padding-bottom: 0;
+  }
+
+  .home-hero .hero-content .eyebrow,
+  .home-hero .hero-bottom,
+  .home-hero .hero-perks,
+  .home-hero .hero-secondary,
+  .home-hero .hero-disclaimer,
+  .membership-watch-link,
+  .membership-hero-terms,
+  .reference-watch-link,
+  .resorts-watch-link,
+  .about-watch-link,
+  .network-hero-stats,
+  .network-hero-actions > :not(:first-child) {
+    display: none;
+  }
+
+  .membership-hero-actions,
+  .reference-destination-hero-actions,
+  .resorts-hero-actions,
+  .about-hero-actions,
+  .network-hero-actions {
+    margin-top: 22px;
+  }
+
+  .experience-hero-copy,
+  .experience-hero-secondary,
+  .experience-hero-note,
+  .experience-trust-strip,
+  .experience-card p {
+    display: none;
+  }
+
+  /* ---------- Section intros: keep headings, drop paragraphs ---------- */
+  .about-section-intro,
+  .membership-plan-intro > p,
+  .network-value-intro,
+  .network-map-copy > p,
+  .network-featured-copy > p,
+  .network-enquiry-copy > p,
+  .info-intro > p,
+  .resort-detail-summary-copy,
+  .resort-detail-room-copy > p,
+  .resort-detail-membership-copy > p,
+  .reference-destination-card-copy > p,
+  .resort-card-copy > p,
+  .dd-intro,
+  .contact-card-heading p {
+    display: none;
+  }
+
+  /* ---------- Tighter, calmer spacing ---------- */
+  main section {
+    scroll-margin-top: 70px;
+  }
+
+  main h2 {
+    line-height: 1.12;
+  }
+
+  /* ---------- Footer: brand, contact and links only ---------- */
+  .footer-experiences-column,
+  .footer-newsletter-column,
+  .footer-scenic {
+    display: none;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 18px;
+  }
+
+  .footer-brand-column,
+  .footer-contact-column {
+    grid-column: 1 / -1;
+  }
+
+  .footer-brand-column > p {
+    display: none;
+  }
+
+  /* ---------- Home refinements (win over page-hero.css) ---------- */
+  .home-hero .hero-buttons {
+    margin-top: 24px;
+  }
+}

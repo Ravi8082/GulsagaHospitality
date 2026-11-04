@@ -780,7 +780,7 @@ main :is(h1, h2) {
 .membership-copy li::before {
   margin-right: 10px;
   color: #e4c184;
-  content: "✦";
+  content: "\2726";
 }
 
 .membership-copy > a {
@@ -1526,5 +1526,133 @@ main :is(h1, h2) {
 
   .home-network .network-partner-card[aria-hidden="true"] {
     display: none;
+  }
+}
+
+/* Mobile: keep only the headline offer, hide supporting copy for a cleaner premium look */
+@media (max-width: 700px) {
+  .home-hero .hero-copy,
+  .home-hero .hero-disclaimer,
+  .home-hero .hero-bottom > span,
+  .hero-perks small,
+  .home-section-heading > p:last-child,
+  .about-intro,
+  .about-detail p,
+  .membership-copy > p:not(.eyebrow),
+  .membership-copy .membership-terms,
+  .membership-stat > p:last-child,
+  .membership-stat > span:nth-last-of-type(1),
+  .featured-copy > p:not(.eyebrow),
+  .home-invitation-copy > p:not(.eyebrow) {
+    display: none;
+  }
+
+  .home-hero .hero-content {
+    padding-bottom: 130px;
+  }
+
+  .home-hero .hero-content h1 {
+    max-width: 100%;
+  }
+
+  .home-hero .hero-buttons {
+    margin-top: 18px;
+  }
+
+  .home-about {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .about-copy h2,
+  .membership-copy h2 {
+    font-size: 30px;
+  }
+
+  .about-detail {
+    align-items: center;
+    margin: 8px 0;
+  }
+
+  .about-detail h3 {
+    font-size: 14px;
+  }
+
+  .about-copy > a,
+  .membership-copy > a {
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+
+  .home-membership {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .membership-copy ul {
+    font-size: 13px;
+  }
+
+  .membership-copy ul li:nth-child(n + 4) {
+    display: none;
+  }
+
+  .membership-stat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px 12px;
+  }
+
+  .membership-stat > span:first-child {
+    font-size: 9px;
+  }
+
+  .membership-stat strong {
+    font-size: 54px;
+    line-height: 1;
+  }
+
+  .membership-stat-rule {
+    display: none;
+  }
+
+  .home-featured .featured-copy h2 {
+    margin-bottom: 14px;
+  }
+}
+
+/* Mobile hero: only the two headline lines and the call to action */
+@media (max-width: 700px) {
+  .home-hero {
+    min-height: min(560px, 82svh);
+    justify-content: center;
+  }
+
+  .home-hero .hero-content {
+    padding: 96px 7% 48px;
+  }
+
+  .home-hero .hero-content .eyebrow,
+  .home-hero .hero-bottom,
+  .home-hero .hero-perks,
+  .home-hero .hero-secondary {
+    display: none;
+  }
+
+  .home-hero .hero-content h1 {
+    font-size: clamp(38px, 11vw, 48px);
+    line-height: 1.08;
+  }
+
+  .home-hero .hero-content h1 span {
+    display: block;
+    margin-top: 6px;
+  }
+
+  .home-hero .hero-buttons {
+    margin-top: 26px;
   }
 }

@@ -135,7 +135,6 @@ model OtpVerification {
  @@index([email,purpose,createdAt])
  @@index([expiresAt])
  @@index([grantHash])
- @@map("otpverification")
 }
 model JobPosting {
  id String @id @default(uuid()) @db.VarChar(36)
@@ -207,7 +206,6 @@ model UploadedFile {
  employeePhoto Employee? @relation("EmployeePhoto")
  experienceMedia ExperienceMedia[]
  createdAt DateTime @default(now())
-  @@map("uploadedfile")
 }
 model Employee {
  id String @id @default(uuid()) @db.VarChar(36)
@@ -301,7 +299,6 @@ model EmailNotification {
  acceptedAt DateTime?
  createdAt DateTime @default(now())
  @@index([state,availableAt])
- @@map("emailnotification")
 }
 model ApplicationStatusHistory {
  id String @id @default(uuid()) @db.VarChar(36)
@@ -327,7 +324,6 @@ model PasswordReset {
  expiresAt DateTime
  used Boolean @default(false)
  createdAt DateTime @default(now())
- @@map("passwordreset")
 }
 
 model CommunityUser {
@@ -335,6 +331,7 @@ model CommunityUser {
  email String @unique @db.VarChar(255)
  displayName String @db.VarChar(100)
  memberVerified Boolean @default(false)
+ passwordHash String? @db.VarChar(255)
  enabled Boolean @default(true)
  createdAt DateTime @default(now())
  updatedAt DateTime @updatedAt
@@ -344,6 +341,7 @@ model CommunityUser {
  comments ExperienceComment[]
  reports ExperienceReport[]
  notifications ExperienceNotification[]
+ membershipApplication MembershipApplication?
  @@index([memberVerified, enabled])
 }
 
@@ -414,7 +412,6 @@ model ExperienceMedia {
  displayOrder Int @default(0)
  createdAt DateTime @default(now())
  @@index([experienceId, displayOrder])
-  @@map("experiencemedia")
 }
 
 model ExperienceRating {
@@ -517,4 +514,44 @@ model ExperienceNotification {
  readAt DateTime?
  createdAt DateTime @default(now())
  @@index([userId, readAt, createdAt])
+}
+
+model MembershipApplication {
+ id String @id @default(uuid()) @db.VarChar(36)
+ userId String @unique @db.VarChar(36)
+ fullName String @db.VarChar(100)
+ phone String @db.VarChar(30)
+ city String @db.VarChar(100)
+ plan String @db.VarChar(60)
+ listAmount Int?
+ discountPercent Int @default(0)
+ discountNote String? @db.VarChar(200)
+ years Int @default(5)
+ country String? @db.VarChar(60)
+ familyMembers Int?
+ destinations String? @db.VarChar(500)
+ travelFrequency String? @db.VarChar(60)
+ requirements String? @db.VarChar(1000)
+ status String @default("PENDING") @db.VarChar(20)
+ memberCode String? @unique @db.VarChar(24)
+ paymentLink String? @db.VarChar(500)
+ adminNote String? @db.VarChar(500)
+ decidedAt DateTime?
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ user CommunityUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+ @@index([status, createdAt])
+}
+
+model MembershipCoupon {
+  id String @id @default(uuid()) @db.VarChar(36)
+  code String @unique @db.VarChar(40)
+  percent Int
+  note String? @db.VarChar(200)
+  expiresAt DateTime?
+  maxUses Int?
+  usedCount Int @default(0)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

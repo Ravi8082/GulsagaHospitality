@@ -81,6 +81,7 @@ function LoginPage() {
       for (const [endpoint, role] of [
         ["auth/admin/login", "admin"],
         ["partner/login", "partner"],
+        ["community/experiences/auth/otp/password-login", "member"],
       ] as const) {
         try {
           await apiRequest(endpoint, { method: "POST", body });
@@ -210,7 +211,7 @@ function LoginPage() {
               </button>
               <p className="login-note">
                 Admin and partner accounts: enter your sign-in email and we will send a reset link.
-                Members sign in with a one-time code instead.
+                Members who forgot their password can sign in with a one-time code.
               </p>
               <button type="button" className="login-switch" onClick={() => goTo("password")}>
                 Back to sign in

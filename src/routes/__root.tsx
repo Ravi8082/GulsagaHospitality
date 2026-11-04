@@ -24,6 +24,7 @@ import contactCss from "../contact.css?url";
 import aboutCss from "../about.css?url";
 import informationCss from "../information.css?url";
 import pageHeroCss from "../page-hero.css?url";
+import mobileCss from "../mobile.css?url";
 import adminDashboardCss from "../admin-dashboard.css?url";
 import partnerCss from "../partner-dashboard.css?url";
 import memberCss from "../member-dashboard.css?url";
@@ -182,6 +183,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: pageHeroCss,
+      },
+      {
+        rel: "stylesheet",
+        href: mobileCss,
       },
       {
         rel: "stylesheet",

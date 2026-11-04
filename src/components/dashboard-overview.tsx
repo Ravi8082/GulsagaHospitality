@@ -24,6 +24,33 @@ import { useHomeContent } from "@/lib/home-content";
 
 type LiveCounts = Partial<Record<"resorts" | "destinations" | "network_partners", number>>;
 
+type Overview = {
+  users: number;
+  activeMembers: number;
+  pendingMembers: number;
+  memberships: { total: number; active: number; expiring: number };
+  bookings: { total: number; byStatus: Record<string, number> };
+  enquiries: Record<string, number>;
+  partnerEnquiries: number;
+  pendingExperiences: number;
+  recentBookings: {
+    id: number;
+    guest: string;
+    resort: string | null;
+    status: string;
+    checkIn: string | null;
+    checkOut: string | null;
+  }[];
+  series: { date: string; count: number }[];
+};
+
+const enquiryLabels: [string, string][] = [
+  ["NEW", "New"],
+  ["IN_PROGRESS", "In progress"],
+  ["RESPONDED", "Responded"],
+  ["CLOSED", "Closed"],
+];
+
 export function DashboardOverview({
   resortCount,
   destinationCount,
@@ -34,6 +61,7 @@ export function DashboardOverview({
   onNavigate: (section: string) => void;
 }) {
   const [live, setLive] = useState<LiveCounts | null>(null);
+  const [ov, setOv] = useState<Overview | null>(null);
   const { adminDashboardContent, updateAdminDashboardContent, createPreviewMedia } =
     useHomeContent();
 
@@ -48,8 +76,13 @@ export function DashboardOverview({
         if (active) {
           setLive(Object.fromEntries(names.map((name, i) => [name, results[i]?.data.total ?? 0])));
         }
+        const summary = await apiRequest<Overview>("admin/dashboard/overview");
+        if (active) setOv(summary.data);
       } catch {
-        if (active) setLive(null);
+        if (active) {
+          setLive(null);
+          setOv(null);
+        }
       }
     };
     void load();
@@ -62,9 +95,24 @@ export function DashboardOverview({
 
   const source = live ? "Live database" : "Preview · sign in for live";
   const metrics = [
-    { label: "Total users", value: "—", note: "Not connected", icon: Users },
-    { label: "Active members", value: "—", note: "Not connected", icon: Crown },
-    { label: "Total bookings", value: "—", note: "Not connected", icon: CalendarDays },
+    {
+      label: "Total users",
+      value: ov ? String(ov.users) : "—",
+      note: ov ? `${ov.pendingMembers} membership pending` : "Sign in for live",
+      icon: Users,
+    },
+    {
+      label: "Active members",
+      value: ov ? String(ov.activeMembers) : "—",
+      note: ov ? "Live database" : "Sign in for live",
+      icon: Crown,
+    },
+    {
+      label: "Total bookings",
+      value: ov ? String(ov.bookings.total) : "—",
+      note: ov ? "Partner bookings" : "Sign in for live",
+      icon: CalendarDays,
+    },
     {
       label: "Partner resorts",
       value: String(live?.resorts ?? resortCount),
@@ -87,7 +135,14 @@ export function DashboardOverview({
     { label: "Approve Experiences", icon: BadgeCheck, tab: "Experiences" },
     { label: "Send Notification", icon: Bell, tab: "Notifications" },
   ];
-  const membership = ["Total memberships", "Active memberships", "Expiring (next 30 days)"];
+  const membership: [string, number | null][] = [
+    ["Total memberships", ov?.memberships.total ?? null],
+    ["Active memberships", ov?.memberships.active ?? null],
+    ["Expiring (next 30 days)", ov?.memberships.expiring ?? null],
+  ];
+  const enquiryTotal = ov ? Object.values(ov.enquiries).reduce((a, b) => a + b, 0) : 0;
+  const peak = Math.max(1, ...(ov?.series.map((s) => s.count) ?? [1]));
+  const statusClass = (s: string) => s.toLowerCase().replace(/_/g, "-");
 
   return (
     <div className="admin-dashboard">
@@ -141,17 +196,40 @@ export function DashboardOverview({
         <section className="admin-panel admin-board-bookings">
           <div className="admin-panel-heading">
             <h2>Bookings overview</h2>
-            <span className="admin-not-connected">Not connected</span>
+            <span className="admin-not-connected">{ov ? "Last 30 days" : "Not connected"}</span>
           </div>
-          <div className="admin-chart-axes" aria-hidden="true">
-            {[250, 200, 150, 100, 50, 0].map((tick) => (
-              <span key={tick}>{tick}</span>
-            ))}
-          </div>
-          <p className="admin-chart-caption">
-            <ChartNoAxesCombined size={14} aria-hidden="true" /> Connect booking data to view
-            verified trends.
-          </p>
+          {ov ? (
+            <div className="ado-bars" role="img" aria-label="Bookings created per day, last 30 days">
+              {ov.series.map((s) => (
+                <i
+                  key={s.date}
+                  title={`${s.date}: ${s.count}`}
+                  style={{ height: `${Math.max(4, (s.count / peak) * 100)}%` }}
+                  className={s.count ? "on" : ""}
+                />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="admin-chart-axes" aria-hidden="true">
+                {[250, 200, 150, 100, 50, 0].map((tick) => (
+                  <span key={tick}>{tick}</span>
+                ))}
+              </div>
+              <p className="admin-chart-caption">
+                <ChartNoAxesCombined size={14} aria-hidden="true" /> Sign in to view live trends.
+              </p>
+            </>
+          )}
+          {ov ? (
+            <p className="ado-chips">
+              {Object.entries(ov.bookings.byStatus).map(([k, v]) => (
+                <span key={k} className={`ado-chip ${statusClass(k)}`}>
+                  {k.replace(/_/g, " ")} <b>{v}</b>
+                </span>
+              ))}
+            </p>
+          ) : null}
         </section>
 
         <section className="admin-panel admin-board-enquiry">
@@ -162,15 +240,15 @@ export function DashboardOverview({
             </Button>
           </div>
           <div className="admin-donut" role="img" aria-label="No enquiry data connected">
-            <strong>—</strong>
+            <strong>{ov ? enquiryTotal : "—"}</strong>
             <span>Total enquiries</span>
           </div>
           <ul className="admin-legend">
-            {["New", "In progress", "Resolved", "On hold"].map((label) => (
+            {enquiryLabels.map(([key, label]) => (
               <li key={label}>
                 <i />
                 {label}
-                <b>—</b>
+                <b>{ov ? (ov.enquiries[key] ?? 0) : "—"}</b>
               </li>
             ))}
           </ul>
@@ -185,8 +263,30 @@ export function DashboardOverview({
           </div>
           <div className="admin-approval-empty">
             <BadgeCheck aria-hidden="true" />
-            <strong>No approval queue connected</strong>
-            <span>Experience moderation lives in the Experiences panel.</span>
+            {ov ? (
+              <>
+                <strong>
+                  {ov.pendingExperiences + ov.pendingMembers
+                    ? `${ov.pendingMembers} membership · ${ov.pendingExperiences} experience`
+                    : "All caught up"}
+                </strong>
+                <span>
+                  {ov.pendingMembers || ov.pendingExperiences
+                    ? "Waiting for your review."
+                    : "Nothing is waiting for approval."}
+                </span>
+                {ov.pendingMembers ? (
+                  <Button size="sm" variant="outline" onClick={() => onNavigate("Memberships")}>
+                    Review memberships
+                  </Button>
+                ) : null}
+              </>
+            ) : (
+              <>
+                <strong>No approval queue connected</strong>
+                <span>Experience moderation lives in the Experiences panel.</span>
+              </>
+            )}
           </div>
         </section>
 
@@ -222,9 +322,27 @@ export function DashboardOverview({
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={5}>No bookings are connected yet.</td>
-              </tr>
+              {ov?.recentBookings.length ? (
+                ov.recentBookings.map((b) => (
+                  <tr key={b.id}>
+                    <td>BK-{b.id}</td>
+                    <td>{b.guest}</td>
+                    <td>{b.resort ?? "—"}</td>
+                    <td>
+                      {b.checkIn ?? "—"} → {b.checkOut ?? "—"}
+                    </td>
+                    <td>
+                      <span className={`ado-chip ${statusClass(b.status)}`}>
+                        {b.status.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5}>{ov ? "No bookings yet." : "No bookings are connected yet."}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </section>
@@ -234,10 +352,10 @@ export function DashboardOverview({
             <h2>Membership summary</h2>
           </div>
           <ul className="admin-summary-list">
-            {membership.map((label) => (
+            {membership.map(([label, value]) => (
               <li key={label}>
                 {label}
-                <b>—</b>
+                <b>{value ?? "—"}</b>
               </li>
             ))}
           </ul>

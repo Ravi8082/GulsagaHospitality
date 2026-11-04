@@ -67,7 +67,21 @@ export type ApiResponse<T> = {
   message?: string;
 };
 
-export const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
+const loopbackHosts = ["localhost", "127.0.0.1"];
+
+// localhost and 127.0.0.1 are different sites, so the session/CSRF cookie would be dropped.
+// Keep the API on the same loopback host the page was opened from.
+function resolveApiBase() {
+  const configured = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
+  if (typeof window === "undefined" || !/^https?:\/\//.test(configured)) return configured;
+  const url = new URL(configured);
+  if (loopbackHosts.includes(url.hostname) && loopbackHosts.includes(window.location.hostname)) {
+    url.hostname = window.location.hostname;
+  }
+  return url.toString().replace(/\/+$/, "");
+}
+
+export const apiBase = resolveApiBase();
 
 let csrfToken = "";
 

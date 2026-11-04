@@ -25,6 +25,7 @@ import { Route as MembershipRouteImport } from './routes/membership'
 import { Route as NetworkRouteImport } from './routes/network'
 import { Route as PartnerRouteImport } from './routes/partner'
 import { Route as PartnerRegistrationRouteImport } from './routes/partner-registration'
+import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResortsRouteImport } from './routes/resorts'
@@ -36,6 +37,7 @@ import { Route as DestinationsDestinationIdRouteImport } from './routes/destinat
 import { Route as ExperiencesIndexRouteImport } from './routes/experiences.index'
 import { Route as ExperiencesDashboardRouteImport } from './routes/experiences.dashboard'
 import { Route as ExperiencesShareRouteImport } from './routes/experiences.share'
+import { Route as MembershipJoinRouteImport } from './routes/membership_.join'
 import { Route as ResortsIndexRouteImport } from './routes/resorts.index'
 import { Route as ResortsResortIdRouteImport } from './routes/resorts.$resortId'
 
@@ -119,6 +121,11 @@ const PartnerRegistrationRoute = PartnerRegistrationRouteImport.update({
   path: '/partner-registration',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PoliciesRoute = PoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -175,6 +182,11 @@ const ExperiencesShareRoute = ExperiencesShareRouteImport.update({
   path: '/share',
   getParentRoute: () => ExperiencesRoute,
 } as any)
+const MembershipJoinRoute = MembershipJoinRouteImport.update({
+  id: '/membership_/join',
+  path: '/membership/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResortsIndexRoute = ResortsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -203,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/network': typeof NetworkRoute
   '/partner': typeof PartnerRoute
   '/partner-registration': typeof PartnerRegistrationRoute
+  '/policies': typeof PoliciesRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resorts': typeof ResortsRouteWithChildren
@@ -212,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/destinations/$destinationId': typeof DestinationsDestinationIdRoute
   '/experiences/dashboard': typeof ExperiencesDashboardRoute
   '/experiences/share': typeof ExperiencesShareRoute
+  '/membership/join': typeof MembershipJoinRoute
   '/resorts/$resortId': typeof ResortsResortIdRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/experiences/': typeof ExperiencesIndexRoute
@@ -232,6 +246,7 @@ export interface FileRoutesByTo {
   '/network': typeof NetworkRoute
   '/partner': typeof PartnerRoute
   '/partner-registration': typeof PartnerRegistrationRoute
+  '/policies': typeof PoliciesRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/support': typeof SupportRoute
@@ -240,6 +255,7 @@ export interface FileRoutesByTo {
   '/destinations/$destinationId': typeof DestinationsDestinationIdRoute
   '/experiences/dashboard': typeof ExperiencesDashboardRoute
   '/experiences/share': typeof ExperiencesShareRoute
+  '/membership/join': typeof MembershipJoinRoute
   '/resorts/$resortId': typeof ResortsResortIdRoute
   '/destinations': typeof DestinationsIndexRoute
   '/experiences': typeof ExperiencesIndexRoute
@@ -263,6 +279,7 @@ export interface FileRoutesById {
   '/network': typeof NetworkRoute
   '/partner': typeof PartnerRoute
   '/partner-registration': typeof PartnerRegistrationRoute
+  '/policies': typeof PoliciesRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resorts': typeof ResortsRouteWithChildren
@@ -272,6 +289,7 @@ export interface FileRoutesById {
   '/destinations/$destinationId': typeof DestinationsDestinationIdRoute
   '/experiences/dashboard': typeof ExperiencesDashboardRoute
   '/experiences/share': typeof ExperiencesShareRoute
+  '/membership_/join': typeof MembershipJoinRoute
   '/resorts/$resortId': typeof ResortsResortIdRoute
   '/destinations/': typeof DestinationsIndexRoute
   '/experiences/': typeof ExperiencesIndexRoute
@@ -296,6 +314,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/partner'
     | '/partner-registration'
+    | '/policies'
     | '/privacy'
     | '/reset-password'
     | '/resorts'
@@ -305,6 +324,7 @@ export interface FileRouteTypes {
     | '/destinations/$destinationId'
     | '/experiences/dashboard'
     | '/experiences/share'
+    | '/membership/join'
     | '/resorts/$resortId'
     | '/destinations/'
     | '/experiences/'
@@ -325,6 +345,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/partner'
     | '/partner-registration'
+    | '/policies'
     | '/privacy'
     | '/reset-password'
     | '/support'
@@ -333,6 +354,7 @@ export interface FileRouteTypes {
     | '/destinations/$destinationId'
     | '/experiences/dashboard'
     | '/experiences/share'
+    | '/membership/join'
     | '/resorts/$resortId'
     | '/destinations'
     | '/experiences'
@@ -355,6 +377,7 @@ export interface FileRouteTypes {
     | '/network'
     | '/partner'
     | '/partner-registration'
+    | '/policies'
     | '/privacy'
     | '/reset-password'
     | '/resorts'
@@ -364,6 +387,7 @@ export interface FileRouteTypes {
     | '/destinations/$destinationId'
     | '/experiences/dashboard'
     | '/experiences/share'
+    | '/membership_/join'
     | '/resorts/$resortId'
     | '/destinations/'
     | '/experiences/'
@@ -387,12 +411,14 @@ export interface RootRouteChildren {
   NetworkRoute: typeof NetworkRoute
   PartnerRoute: typeof PartnerRoute
   PartnerRegistrationRoute: typeof PartnerRegistrationRoute
+  PoliciesRoute: typeof PoliciesRoute
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResortsRoute: typeof ResortsRouteWithChildren
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   ApiNewsletterOtpRoute: typeof ApiNewsletterOtpRoute
+  MembershipJoinRoute: typeof MembershipJoinRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -509,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PartnerRegistrationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/policies': {
+      id: '/policies'
+      path: '/policies'
+      fullPath: '/policies'
+      preLoaderRoute: typeof PoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -585,6 +618,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/experiences/share'
       preLoaderRoute: typeof ExperiencesShareRouteImport
       parentRoute: typeof ExperiencesRoute
+    }
+    '/membership_/join': {
+      id: '/membership_/join'
+      path: '/membership/join'
+      fullPath: '/membership/join'
+      preLoaderRoute: typeof MembershipJoinRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/resorts/': {
       id: '/resorts/'
@@ -663,12 +703,14 @@ const rootRouteChildren: RootRouteChildren = {
   NetworkRoute: NetworkRoute,
   PartnerRoute: PartnerRoute,
   PartnerRegistrationRoute: PartnerRegistrationRoute,
+  PoliciesRoute: PoliciesRoute,
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResortsRoute: ResortsRouteWithChildren,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   ApiNewsletterOtpRoute: ApiNewsletterOtpRoute,
+  MembershipJoinRoute: MembershipJoinRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

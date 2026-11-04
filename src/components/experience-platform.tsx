@@ -38,6 +38,8 @@ import {
 import { AUTH_EVENT, getToken } from "@/lib/auth-token";
 import { experiencePreviewStories } from "@/lib/experience-preview-data";
 import { useHomeContent } from "@/lib/home-content";
+import { MembershipApplicationsAdmin } from "@/components/membership-applications-admin";
+import { MembershipCouponsAdmin } from "@/components/membership-coupons-admin";
 
 type HospitalityBundle = {
   collections: {
@@ -183,12 +185,19 @@ export function ExperienceSignIn({
     setError("");
     setNotice("");
     try {
-      const result = await apiRequest<{ message: string }>("community/experiences/auth/otp/send", {
-        method: "POST",
-        body: JSON.stringify({ email, ...(displayName.trim() ? { displayName } : {}) }),
-      });
+      const result = await apiRequest<{ message: string; devCode?: string }>(
+        "community/experiences/auth/otp/send",
+        {
+          method: "POST",
+          body: JSON.stringify({ email, ...(displayName.trim() ? { displayName } : {}) }),
+        },
+      );
       setSent(true);
-      setNotice(result.data.message);
+      setNotice(
+        result.data.devCode
+          ? `Test mode: email is not configured. Your code is ${result.data.devCode}`
+          : result.data.message,
+      );
     } catch (reason) {
       setError(messageOf(reason));
     } finally {
@@ -1284,6 +1293,8 @@ export function MemberExperiencesDashboard() {
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<Experience[]>([]);
+  const { experiencesPageContent: page } = useHomeContent();
+  const heroImage = (page.dashboardMedia ?? page.heroMedia).src;
   const [filter, setFilter] = useState("ALL");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -1339,19 +1350,32 @@ export function MemberExperiencesDashboard() {
   };
 
   return (
-    <section className="experience-dashboard-shell">
-      <div className="experience-dashboard-heading">
-        <div>
-          <p className="eyebrow">YOUR MEMBER SPACE</p>
-          <h1>My Experiences</h1>
-          <p>Follow every story from the moment you share it to the day it goes live.</p>
+    <div className="experience-page">
+      <section
+        className="experience-hero experience-dashboard-hero"
+        style={{ backgroundImage: `url("${heroImage}")` }}
+      >
+        <div className="experience-hero-shade" />
+        <div className="experience-hero-inner">
+          <div>
+            <p className="eyebrow">{page.dashboardEyebrow}</p>
+            <h1>
+              {page.dashboardTitle}
+              <br />
+              <em>{page.dashboardHighlight}</em>
+            </h1>
+            <p className="experience-hero-copy">{page.dashboardDescription}</p>
+            <div className="experience-hero-actions">
+              <Button asChild>
+                <Link to="/experiences/share">
+                  <Plus /> {page.dashboardCta} <ArrowRight />
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
-        <Button asChild>
-          <Link to="/experiences/share">
-            <Plus /> Add New Experience <ArrowRight />
-          </Link>
-        </Button>
-      </div>
+      </section>
+      <section className="experience-dashboard-shell">
       {!authenticated ? (
         <div className="experience-dashboard-login">
           <ExperienceSignIn onVerified={() => void loadMine()} />
@@ -1411,11 +1435,11 @@ export function MemberExperiencesDashboard() {
           ) : (
             <div className="experience-empty experience-empty-small">
               <Mountain />
-              <h3>{rows.length ? "No stories in this view." : "Your first story belongs here."}</h3>
+              <h3>{rows.length ? "No stories in this view." : page.dashboardEmptyTitle}</h3>
               <p>
                 {rows.length
                   ? "Choose another status to see more of your experiences."
-                  : "Share a stay, a creative retreat or a celebration with the Gulsaga community."}
+                  : page.dashboardEmptyText}
               </p>
               <Button asChild>
                 <Link to="/experiences/share">
@@ -1426,7 +1450,8 @@ export function MemberExperiencesDashboard() {
           )}
         </>
       )}
-    </section>
+      </section>
+    </div>
   );
 }
 
@@ -1684,6 +1709,87 @@ export function ExperienceAdminPanel() {
           </p>
         </div>
         <img src={experiencesPageContent.heroMedia.src} alt="Current experiences page hero" />
+      </section>
+      <MembershipApplicationsAdmin />
+      <MembershipCouponsAdmin />
+      <section className="experience-admin-hero-settings">
+        <div>
+          <p className="eyebrow">MEMBER DASHBOARD APPEARANCE</p>
+          <h2>My Experiences page</h2>
+          <p>Edit the hero, button and empty-state text members see after they sign in.</p>
+          {(
+            [
+              ["dashboardEyebrow", "Eyebrow"],
+              ["dashboardTitle", "Heading"],
+              ["dashboardHighlight", "Highlight"],
+              ["dashboardCta", "Button label"],
+              ["dashboardEmptyTitle", "Empty-state heading"],
+            ] as const
+          ).map(([field, label]) => (
+            <label key={field}>
+              {label}
+              <input
+                value={experiencesPageContent[field]}
+                onChange={(event) =>
+                  updateExperiencesPageContent({
+                    ...experiencesPageContent,
+                    [field]: event.target.value,
+                  })
+                }
+              />
+            </label>
+          ))}
+          {(
+            [
+              ["dashboardDescription", "Description"],
+              ["dashboardEmptyText", "Empty-state text"],
+            ] as const
+          ).map(([field, label]) => (
+            <label key={field}>
+              {label}
+              <textarea
+                value={experiencesPageContent[field]}
+                onChange={(event) =>
+                  updateExperiencesPageContent({
+                    ...experiencesPageContent,
+                    [field]: event.target.value,
+                  })
+                }
+              />
+            </label>
+          ))}
+          <label>
+            Replace dashboard hero image
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (!file) return;
+                updateExperiencesPageContent({
+                  ...experiencesPageContent,
+                  dashboardMedia: createPreviewMedia(file),
+                });
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+          {experiencesPageContent.dashboardMedia ? (
+            <button
+              type="button"
+              className="experience-text-button"
+              onClick={() =>
+                updateExperiencesPageContent({ ...experiencesPageContent, dashboardMedia: null })
+              }
+            >
+              Use the main hero image instead
+            </button>
+          ) : null}
+        </div>
+        <img
+          src={(experiencesPageContent.dashboardMedia ?? experiencesPageContent.heroMedia).src}
+          alt="Current member dashboard hero"
+        />
       </section>
       {stats && (
         <div className="experience-admin-stats">

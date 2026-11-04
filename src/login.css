@@ -11,7 +11,7 @@
 .login-welcome p { line-height: 1.6; margin-bottom: 1.5rem; }
 .login-welcome ul { list-style: none; padding: 0; display: grid; gap: .9rem; }
 .login-welcome li { padding-left: 1.8rem; position: relative; }
-.login-welcome li::before { content: "◆"; color: #d9b866; position: absolute; left: 0; }
+.login-welcome li::before { content: "\25C6"; color: #d9b866; position: absolute; left: 0; }
 
 .login-panel { display: grid; align-content: center; justify-items: center; gap: 1.2rem; padding: 2rem 1.5rem; background: radial-gradient(circle at top right, #f6e9c8, #fff 45%); }
 .login-logo img { height: 64px; width: auto; }

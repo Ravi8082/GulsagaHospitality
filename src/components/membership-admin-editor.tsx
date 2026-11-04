@@ -8,7 +8,14 @@ import {
   type MembershipPageContent,
   type MembershipStep,
 } from "@/lib/home-content";
-import { initialMembershipOfferMedia, initialMembershipPageContent } from "@/lib/membership-data";
+import {
+  defaultDestinationPitches,
+  defaultMembershipPlans,
+  initialMembershipOfferMedia,
+  initialMembershipPageContent,
+  type DestinationPitch,
+  type MembershipPlan,
+} from "@/lib/membership-data";
 
 const benefitIcons = [
   { value: "bed", label: "Resort stay" },
@@ -285,6 +292,183 @@ export function MembershipAdminEditor() {
         </Button>
       </EditorSection>
 
+      <EditorSection title="Membership plans (Basic / Premium / Elite)">
+        <TextField
+          label="Plans heading"
+          value={membershipPageContent.plansHeading ?? "Choose Your Membership"}
+          onChange={(plansHeading) =>
+            updateMembershipPageContent({ ...membershipPageContent, plansHeading })
+          }
+        />
+        <TextField
+          label="Plans note (prices, validity, eligibility)"
+          value={membershipPageContent.plansNote ?? ""}
+          onChange={(plansNote) =>
+            updateMembershipPageContent({ ...membershipPageContent, plansNote })
+          }
+          multiline
+        />
+        {(membershipPageContent.tiers ?? defaultMembershipPlans).map((plan) => {
+          const tiers = membershipPageContent.tiers ?? defaultMembershipPlans;
+          const change = (patch: Partial<MembershipPlan>) =>
+            updateMembershipPageContent({
+              ...membershipPageContent,
+              tiers: tiers.map((item) => (item.id === plan.id ? { ...item, ...patch } : item)),
+            });
+          return (
+            <div className="home-editor-group" key={plan.id}>
+              <TextField label="Plan name" value={plan.name} onChange={(name) => change({ name })} />
+              <TextField
+                label="Price in ₹ (0 = contact us)"
+                value={String(plan.priceInr)}
+                onChange={(value) => change({ priceInr: Math.max(0, Number(value.replace(/\D/g, "")) || 0) })}
+              />
+              <TextField
+                label="Validity (years)"
+                value={String(plan.years)}
+                onChange={(value) => change({ years: Math.min(50, Math.max(1, Number(value.replace(/\D/g, "")) || 1)) })}
+              />
+              <TextField label="Badge (e.g. Most Popular, empty = none)" value={plan.badge} onChange={(badge) => change({ badge })} />
+              <TextField label="Button label" value={plan.cta} onChange={(cta) => change({ cta })} />
+              <TextField
+                label="Features (one per line)"
+                value={plan.features.join("\n")}
+                onChange={(value) => change({ features: value.split("\n") })}
+                multiline
+              />
+              <label className="home-editor-field">
+                <input
+                  type="checkbox"
+                  checked={plan.contactOnly}
+                  onChange={(event) => change({ contactOnly: event.currentTarget.checked })}
+                />{" "}
+                Contact-only plan (button opens the contact page)
+              </label>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove plan ${plan.name}`}
+                onClick={() =>
+                  updateMembershipPageContent({
+                    ...membershipPageContent,
+                    tiers: tiers.filter((item) => item.id !== plan.id),
+                  })
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          );
+        })}
+        <Button
+          variant="outline"
+          onClick={() =>
+            updateMembershipPageContent({
+              ...membershipPageContent,
+              tiers: [
+                ...(membershipPageContent.tiers ?? defaultMembershipPlans),
+                {
+                  id: `plan-${Date.now().toString(36)}`,
+                  name: "New plan",
+                  priceInr: 100000,
+                  years: 5,
+                  features: ["Benefit one"],
+                  badge: "",
+                  cta: "Choose Plan",
+                  contactOnly: false,
+                },
+              ],
+            })
+          }
+        >
+          <Plus /> Add plan
+        </Button>      </EditorSection>
+
+      <EditorSection title="WhatsApp & offers">
+        <TextField
+          label="WhatsApp pre-filled message (mention plan, discount or coupon code)"
+          value={membershipPageContent.whatsappMessage ?? ""}
+          onChange={(whatsappMessage) =>
+            updateMembershipPageContent({ ...membershipPageContent, whatsappMessage })
+          }
+          multiline
+        />
+        <TextField
+          label="Offer banner on the join page (e.g. Use code WELCOME10 for 10% off)"
+          value={membershipPageContent.offerText ?? ""}
+          onChange={(offerText) => updateMembershipPageContent({ ...membershipPageContent, offerText })}
+          multiline
+        />
+      </EditorSection>
+
+      <EditorSection title="Destination highlights (shown to guests)">
+        <TextField
+          label="Button label"
+          value={membershipPageContent.destinationPitchCta ?? "Join Gulsaga Premium"}
+          onChange={(destinationPitchCta) =>
+            updateMembershipPageContent({ ...membershipPageContent, destinationPitchCta })
+          }
+        />
+        {(membershipPageContent.destinationPitches ?? defaultDestinationPitches).map((pitch) => {
+          const pitches = membershipPageContent.destinationPitches ?? defaultDestinationPitches;
+          const change = (patch: Partial<DestinationPitch>) =>
+            updateMembershipPageContent({
+              ...membershipPageContent,
+              destinationPitches: pitches.map((item) => (item.id === pitch.id ? { ...item, ...patch } : item)),
+            });
+          return (
+            <div className="home-editor-group" key={pitch.id}>
+              <TextField label="Destination name (matches destination / resort region)" value={pitch.name} onChange={(name) => change({ name })} />
+              <TextField label="Hook line" value={pitch.tagline} onChange={(tagline) => change({ tagline })} multiline />
+              <TextField
+                label="Famous nearby places (one per line)"
+                value={pitch.nearby.join("\n")}
+                onChange={(value) => change({ nearby: value.split("\n") })}
+                multiline
+              />
+              <TextField
+                label="What guests can do (one per line)"
+                value={pitch.activities.join("\n")}
+                onChange={(value) => change({ activities: value.split("\n") })}
+                multiline
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Remove ${pitch.name}`}
+                onClick={() =>
+                  updateMembershipPageContent({
+                    ...membershipPageContent,
+                    destinationPitches: pitches.filter((item) => item.id !== pitch.id),
+                  })
+                }
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          );
+        })}
+        <Button
+          variant="outline"
+          onClick={() =>
+            updateMembershipPageContent({
+              ...membershipPageContent,
+              destinationPitches: [
+                ...(membershipPageContent.destinationPitches ?? defaultDestinationPitches),
+                {
+                  id: `dest-${Date.now().toString(36)}`,
+                  name: "New destination",
+                  tagline: "Why members love it.",
+                  nearby: ["Famous place"],
+                  activities: ["Activity"],
+                },
+              ],
+            })
+          }
+        >
+          <Plus /> Add destination
+        </Button>
+      </EditorSection>
       <EditorSection title="How it works">
         <TextField
           label="Section heading"
@@ -582,7 +766,9 @@ export function MembershipAdminEditor() {
 }
 
 type StringContentKey = {
-  [Key in keyof MembershipPageContent]: MembershipPageContent[Key] extends string ? Key : never;
+  [Key in keyof Required<MembershipPageContent>]: Required<MembershipPageContent>[Key] extends string
+    ? Key
+    : never;
 }[keyof MembershipPageContent];
 
 function EditorSection({ title, children }: { title: string; children: ReactNode }) {
@@ -593,3 +779,4 @@ function EditorSection({ title, children }: { title: string; children: ReactNode
     </section>
   );
 }
+

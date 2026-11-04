@@ -19,6 +19,7 @@ import { Layout } from "@/components/hotel-layout";
 import { Button } from "@/components/ui/button";
 import { useHomeContent, type ContactInquiryCategory } from "@/lib/home-content";
 import { pageHead } from "@/lib/hotel-data";
+import { apiRequest } from "@/lib/experience-api";
 
 const categoryIcons = {
   bed: BedDouble,
@@ -30,7 +31,7 @@ const categoryIcons = {
 
 export const Route = createFileRoute("/contact")({
   validateSearch: (search: Record<string, unknown>) => ({
-    hotel: typeof search.hotel === "string" ? search.hotel : "",
+    hotel: typeof search["hotel"] === "string" ? search["hotel"] : "",
   }),
   head: () =>
     pageHead(
@@ -50,33 +51,44 @@ function Contact() {
     contactPageContent.inquiryCategories[0]?.label ?? "",
   );
   const [submissionNote, setSubmissionNote] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [sending, setSending] = useState(false);
   const whatsappNumber = footerContent.whatsappNumber.replace(/\D/g, "");
   const mapQuery = encodeURIComponent(footerContent.location);
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
   const mapEmbedUrl = `https://maps.google.com/maps?q=${mapQuery}&z=12&output=embed`;
 
-  const submitEnquiry = (event: FormEvent<HTMLFormElement>) => {
+  const submitEnquiry = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const enquiryId = `GH-${Date.now().toString(36).toUpperCase()}`;
-    const subject = encodeURIComponent(
-      `${selectedCategory || "General enquiry"} — ${formData.get("name")} (${enquiryId})`,
-    );
-    const body = encodeURIComponent(
-      [
-        `Enquiry reference: ${enquiryId}`,
-        `Name: ${formData.get("name")}`,
-        `Email: ${formData.get("email")}`,
-        `Phone: ${formData.get("phone") || "Not provided"}`,
-        `Inquiry type: ${selectedCategory || "General enquiry"}`,
-        "",
-        String(formData.get("message") ?? ""),
-      ].join("\n"),
-    );
-    setSubmissionNote(
-      `Reference ${enquiryId} is ready. Send the email draft to complete your enquiry; this preview does not save submissions.`,
-    );
-    window.location.href = `mailto:${footerContent.email}?subject=${subject}&body=${body}`;
+    if (!accepted) {
+      setSubmissionNote("Please accept the Terms & Conditions and Privacy Policy to continue.");
+      return;
+    }
+    const form = event.currentTarget;
+    setSending(true);
+    setSubmissionNote("");
+    try {
+      const result = await apiRequest<{ reference: string }>("public/enquiry", {
+        method: "POST",
+        body: JSON.stringify({
+          name: String(formData.get("name") ?? ""),
+          email: String(formData.get("email") ?? ""),
+          phone: String(formData.get("phone") ?? ""),
+          type: selectedCategory || "General enquiry",
+          message: String(formData.get("message") ?? ""),
+          accepted: true,
+        }),
+      });
+      setSubmissionNote(`Thank you! Your enquiry is received. Reference ${result.data.reference}. A confirmation will reach your email.`);
+      form.reset();
+      setMessageText("");
+      setAccepted(false);
+    } catch (reason) {
+      setSubmissionNote(reason instanceof Error ? reason.message : "Could not send your enquiry. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -188,7 +200,14 @@ function Contact() {
               />
               <small>{messageText.length} / 500</small>
             </label>
-            <Button className="contact-submit" type="submit" size="lg">
+            <label className="contact-terms">
+              <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.currentTarget.checked)} />
+              <span>
+                I accept the <a href="/policies?doc=terms" target="_blank" rel="noreferrer">Terms &amp; Conditions</a> and{" "}
+                <a href="/policies?doc=privacy" target="_blank" rel="noreferrer">Privacy Policy</a>. *
+              </span>
+            </label>
+            <Button className="contact-submit" type="submit" size="lg" disabled={!accepted || sending}>
               <Send aria-hidden="true" /> Send Message
             </Button>
             {submissionNote && (

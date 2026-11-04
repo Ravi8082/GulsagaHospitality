@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowRight,
@@ -23,6 +23,7 @@ import { PreviewImage } from "@/components/preview-image";
 import { Button } from "@/components/ui/button";
 import { useHomeContent, type MembershipBenefit } from "@/lib/home-content";
 import { pageHead } from "@/lib/hotel-data";
+import { defaultMembershipPlans, formatInr } from "@/lib/membership-data";
 
 const benefitIcons = {
   bed: BedDouble,
@@ -86,12 +87,12 @@ function Membership() {
             <p>{membershipPageContent.description}</p>
             <div className="membership-hero-actions">
               <Button size="lg" asChild>
-                <Link to="/contact" search={{ hotel: "Gulsaga Membership" }}>
+                <Link to="/membership/join">
                   {membershipPageContent.primaryLabel} <ArrowRight />
                 </Link>
               </Button>
               <a className="membership-watch-link" href="#how-membership-works">
-                <span aria-hidden="true">▶</span>
+                <span aria-hidden="true">â–¶</span>
                 {membershipPageContent.secondaryLabel}
               </a>
             </div>
@@ -115,6 +116,41 @@ function Membership() {
               );
             })}
           </div>
+        </section>
+
+        <section className="mplans" id="choose-plan">
+          <h2>{membershipPageContent.plansHeading ?? "Choose Your Membership Plan"}</h2>
+          <p>Transparent pricing, clear benefits and no hidden charges.</p>
+          <div className="mplans-grid">
+            {(membershipPageContent.tiers ?? defaultMembershipPlans).map((plan) => (
+              <article className={`mplan${plan.badge ? " recommended" : ""}`} key={plan.id}>
+                {plan.badge ? <span className="mplan-badge">{plan.badge}</span> : null}
+                {plan.image ? <img className="mplan-img" src={plan.image} alt={`${plan.name} membership`} loading="lazy" /> : null}
+                <h3>{plan.name}</h3>
+                <div className="mplan-price">
+                  {plan.contactOnly || !plan.priceInr ? plan.tagline ?? "Contact Us" : formatInr(plan.priceInr)}
+                  {!plan.contactOnly && plan.years ? <small>{plan.years} Years</small> : null}
+                </div>
+                <ul>
+                  {plan.features.filter(Boolean).map((feature) => (
+                    <li key={feature}>{feature}</li>
+                  ))}
+                </ul>
+                {plan.contactOnly ? (
+                  <Link className="mplan-btn" to="/contact" search={{ hotel: "" }}>
+                    {plan.cta}
+                  </Link>
+                ) : (
+                  <Link className="mplan-btn" to="/membership/join" search={{ plan: plan.id }}>
+                    {plan.cta}
+                  </Link>
+                )}
+              </article>
+            ))}
+          </div>
+          {membershipPageContent.plansNote ? (
+            <p className="mplans-note">{membershipPageContent.plansNote}</p>
+          ) : null}
         </section>
 
         <section className="membership-overview" id="membership-benefits">
@@ -202,7 +238,7 @@ function Membership() {
         <section className="membership-plan-section" id="membership-plan">
           <div className="membership-plan-intro">
             <p className="eyebrow">
-              {membershipPageContent.years} YEARS · {membershipPageContent.eligibilityHeading}
+              {membershipPageContent.years} YEARS Â· {membershipPageContent.eligibilityHeading}
             </p>
             <h2>{membershipPageContent.pricingHeading}</h2>
             <p>{membershipPageContent.eligibility}</p>
@@ -268,7 +304,7 @@ function Membership() {
               </dl>
               <p className="membership-pricing-note">{membershipPageContent.pricingNote}</p>
               <Button size="lg" asChild>
-                <Link to="/contact" search={{ hotel: "Gulsaga Membership" }}>
+                <Link to="/membership/join">
                   {membershipPageContent.primaryLabel} <ArrowUpRight />
                 </Link>
               </Button>
@@ -318,7 +354,7 @@ function Membership() {
           <p>{membershipPageContent.enquiryDescription}</p>
           <p className="membership-enquiry-note">{membershipPageContent.enquiryNote}</p>
           <Button size="lg" asChild>
-            <Link to="/contact" search={{ hotel: "Gulsaga Membership" }}>
+            <Link to="/membership/join">
               {membershipPageContent.enquiryCta} <ArrowUpRight />
             </Link>
           </Button>
@@ -327,3 +363,4 @@ function Membership() {
     </Layout>
   );
 }
+

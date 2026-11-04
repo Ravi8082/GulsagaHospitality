@@ -226,7 +226,7 @@ function About() {
             <h2>{about.ctaHeading}</h2>
             <p>{about.ctaDescription}</p>
             <Button asChild size="lg">
-              <Link to="/membership">
+              <Link to="/membership/join">
                 {about.ctaLabel} <ArrowRight aria-hidden="true" />
               </Link>
             </Button>

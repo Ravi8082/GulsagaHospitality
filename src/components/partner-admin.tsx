@@ -9,6 +9,7 @@ type PartnerRow = {
   email: string;
   enabled: number | boolean;
   resortIds: number[];
+  properties?: { id: number; name: string; listed: boolean }[];
 };
 type Request = {
   id: number;
@@ -26,7 +27,7 @@ export function PartnerAdmin() {
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", resortIds: "" });
+  const [form, setForm] = useState({ name: "", email: "", resortIds: "", propertyName: "", propertyLocation: "" });
   const [credential, setCredential] = useState<{ email: string; password: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -58,10 +59,13 @@ export function PartnerAdmin() {
             .split(",")
             .map((v) => Number(v.trim()))
             .filter(Boolean),
+          ...(form.propertyName.trim()
+            ? { newProperty: { name: form.propertyName.trim(), location: form.propertyLocation.trim() } }
+            : {}),
         }),
       });
       setCredential({ email: form.email, password: data.temporaryPassword });
-      setForm({ name: "", email: "", resortIds: "" });
+      setForm({ name: "", email: "", resortIds: "", propertyName: "", propertyLocation: "" });
       await load();
     } catch (reason) {
       setError(message(reason));
@@ -83,6 +87,17 @@ export function PartnerAdmin() {
     if (!window.confirm(`Permanently delete ${partner.email}? This cannot be undone.`)) return;
     try {
       await apiRequest(`admin/partners/${partner.id}`, { method: "DELETE" });
+      await load();
+    } catch (reason) {
+      setError(message(reason));
+    }
+  };
+  const setListed = async (resortId: number, listed: boolean) => {
+    try {
+      await apiRequest(`admin/partners/properties/${resortId}/listed`, {
+        method: "PUT",
+        body: JSON.stringify({ listed }),
+      });
       await load();
     } catch (reason) {
       setError(message(reason));
@@ -134,10 +149,21 @@ export function PartnerAdmin() {
           required
         />
         <input
-          placeholder="Resort IDs, e.g. 1,2"
+          placeholder="New property name"
+          value={form.propertyName}
+          onChange={(e) => setForm({ ...form, propertyName: e.target.value })}
+          required={!form.resortIds.trim()}
+        />
+        <input
+          placeholder="Property location"
+          value={form.propertyLocation}
+          onChange={(e) => setForm({ ...form, propertyLocation: e.target.value })}
+          required={Boolean(form.propertyName.trim())}
+        />
+        <input
+          placeholder="Or existing resort IDs, e.g. 1,2"
           value={form.resortIds}
           onChange={(e) => setForm({ ...form, resortIds: e.target.value })}
-          required
         />
         <Button type="submit">Create partner</Button>
       </form>
@@ -153,7 +179,7 @@ export function PartnerAdmin() {
           <tr>
             <th>Name</th>
             <th>Email</th>
-            <th>Resort IDs</th>
+            <th>Properties</th>
             <th>Status</th>
             <th />
           </tr>
@@ -163,7 +189,16 @@ export function PartnerAdmin() {
             <tr key={p.id}>
               <td>{p.name}</td>
               <td>{p.email}</td>
-              <td>{(p.resortIds ?? []).join(", ")}</td>
+              <td>
+                {(p.properties ?? []).map((r) => (
+                  <div key={r.id}>
+                    {r.name} · {r.listed ? "Live" : "Hidden"}{" "}
+                    <button className="partner-link" onClick={() => void setListed(r.id, !r.listed)}>
+                      {r.listed ? "Hide" : "Publish"}
+                    </button>
+                  </div>
+                ))}
+              </td>
               <td>{p.enabled ? "Enabled" : "Disabled"}</td>
               <td className="partner-actions">
                 <button className="partner-link" onClick={() => void toggle(p)}>

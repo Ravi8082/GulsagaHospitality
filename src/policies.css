@@ -1,0 +1,12 @@
+.policy-page { max-width: 880px; margin: 0 auto; padding: 36px 20px 70px; }
+.policy-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.policy-tabs button { border: 1px solid #d9c9a3; background: #fff; color: #17283b; border-radius: 999px; padding: 8px 16px; cursor: pointer; font: inherit; font-weight: 600; }
+.policy-tabs button.on { background: linear-gradient(135deg, #f3cf7a, #d9a441); color: #17283b; border-color: #d9a441; }
+.policy-card { background: #fff; border: 1px solid #eadfc4; border-radius: 14px; padding: 22px; box-shadow: 0 8px 24px rgb(23 40 59 / 6%); }
+.policy-card h2 { margin: 0; color: #17283b; }
+.policy-card small { color: #6b7280; }
+.policy-body { white-space: pre-wrap; line-height: 1.7; margin-top: 16px; word-break: break-word; color: #17283b; }
+.policy-pdf { display: inline-block; margin-top: 16px; font-weight: 700; color: #17283b; text-decoration: underline; }
+.policy-frame { width: 100%; height: 70vh; border: 1px solid #eadfc4; border-radius: 10px; margin-top: 12px; }
+.policy-note { color: #8a3b12; }
+@media (max-width: 640px) { .policy-frame { height: 60vh; } }

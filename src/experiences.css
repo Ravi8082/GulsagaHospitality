@@ -2681,3 +2681,32 @@
     transition: none;
   }
 }
+
+/* Member dashboard: same hero as the public Experiences page, then the stories list */
+.experience-dashboard-hero .experience-hero-inner {
+  min-height: 300px;
+}
+
+.experience-dashboard-shell {
+  min-height: 0;
+  padding-top: 48px;
+}
+
+@media (max-width: 700px) {
+  .experience-layout .experience-dashboard-hero .experience-hero-inner {
+    min-height: 0;
+    padding: 110px 6% 44px;
+  }
+
+  .experience-dashboard-hero .experience-hero-copy {
+    display: none;
+  }
+
+  .experience-dashboard-hero h1 {
+    font-size: clamp(38px, 11vw, 48px);
+  }
+
+  .experience-dashboard-shell {
+    padding-top: 28px;
+  }
+}

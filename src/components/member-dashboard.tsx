@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type FormEvent, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -18,18 +18,100 @@ import {
   Users,
 } from "lucide-react";
 import { PreviewImage } from "@/components/preview-image";
+import { QRCodeSVG } from "qrcode.react";
 import { apiRequest, type Experience } from "@/lib/experience-api";
 import { clearToken } from "@/lib/auth-token";
 import { hotels } from "@/lib/hotel-data";
 import { useHomeContent } from "@/lib/home-content";
+import { formatInr } from "@/lib/membership-data";
+import {
+  BookingCard,
+  BookingsView,
+  OffersView,
+  bookingGroup,
+  useMemberExtras,
+} from "@/components/member-smart";
+
+type MembershipInfo = {
+  fullName: string;
+  plan: string;
+  status: "PENDING" | "APPROVED" | "ACTIVE" | "REJECTED";
+  memberCode: string | null;
+  paymentLink: string | null;
+  adminNote: string | null;
+  validTill: string | null;
+  listAmount: number | null;
+  discountPercent: number;
+  discountNote: string | null;
+  finalAmount: number | null;
+  years: number;
+};
 
 type Member = {
   id: string;
   displayName: string;
   email?: string;
   memberVerified?: boolean;
+  hasPassword?: boolean;
   joinedAt?: string;
 };
+
+function PasswordCard({ hasPassword, onSaved }: { hasPassword: boolean; onSaved: () => void }) {
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      const { data } = await apiRequest<{ message: string }>(
+        "community/experiences/auth/otp/password",
+        { method: "POST", body: JSON.stringify({ password }) },
+      );
+      setFailed(false);
+      setMessage(data.message);
+      setPassword("");
+      onSaved();
+    } catch (reason) {
+      setFailed(true);
+      setMessage(reason instanceof Error ? reason.message : "Could not save the password.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="md-password" onSubmit={save}>
+      <strong>{hasPassword ? "Change password" : "Set a password"}</strong>
+      <p className="md-note">
+        {hasPassword
+          ? "Choose a new password for faster sign-in."
+          : "Skip the email code next time. Sign in with your email and password."}
+      </p>
+      <input
+        type="password"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        placeholder="At least 10 characters, with a number"
+        aria-label="New password"
+        autoComplete="new-password"
+        minLength={10}
+        required
+      />
+      <button type="submit" disabled={busy}>
+        {busy ? "Saving…" : hasPassword ? "Update password" : "Save password"}
+      </button>
+      {message ? (
+        <p role={failed ? "alert" : "status"} className="md-note">
+          {message}
+        </p>
+      ) : null}
+    </form>
+  );
+}
 
 const modules: { name: string; icon: ComponentType<{ size?: number }> }[] = [
   { name: "Dashboard", icon: Home },
@@ -82,9 +164,17 @@ export function MemberDashboard() {
   const [member, setMember] = useState<Member | null>(null);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [error, setError] = useState("");
+  const [membership, setMembership] = useState<MembershipInfo | null>(null);
   const wishlist = useWishlist();
+  const extras = useMemberExtras();
+  const nextBooking = extras.bookings
+    .filter((b) => bookingGroup(b) === "Upcoming")
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn))[0];
 
   useEffect(() => {
+    void apiRequest<{ membership: MembershipInfo | null }>("community/experiences/membership/me")
+      .then(({ data }) => setMembership(data.membership))
+      .catch(() => setMembership(null));
     void apiRequest<{ user: Member }>("community/experiences/auth/otp/me")
       .then(({ data }) => setMember(data.user))
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Could not load."));
@@ -105,13 +195,24 @@ export function MemberDashboard() {
   const saved = hotels.filter((hotel) => wishlist.ids.includes(hotel.id));
   const approved = experiences.filter((item) => item.status === "APPROVED").length;
 
+  const active = membership?.status === "ACTIVE" && membership.memberCode;
+  const planLabel = membership ? membership.plan.charAt(0).toUpperCase() + membership.plan.slice(1) : "";
+
   const stats = [
     {
       icon: Crown,
       label: "My Membership",
-      value: member?.memberVerified ? "Verified member" : "Not activated",
+      value: active ? `${planLabel} · Active` : membership ? "In progress" : "Not activated",
     },
-    { icon: CalendarDays, label: "Valid till", value: pending, note: "Set by your agreement" },
+    {
+      icon: CalendarDays,
+      label: "Valid till",
+      value: membership?.validTill
+        ? new Date(membership.validTill).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+        : active
+          ? "No expiry"
+          : pending,
+    },
     {
       icon: ShieldCheck,
       label: "Membership benefit",
@@ -119,7 +220,7 @@ export function MemberDashboard() {
       note: "Per signed agreement",
     },
     { icon: Coins, label: "Reward balance", value: pending, note: "Not linked yet" },
-    { icon: Gift, label: "Available offers", value: pending, note: "None published" },
+    { icon: Gift, label: "Available offers", value: extras.offers.length ? String(extras.offers.length) : pending, note: extras.offers.length ? "Tap to view" : "None published" },
   ];
 
   const card = (
@@ -127,13 +228,91 @@ export function MemberDashboard() {
       <span className="md-card-brand">
         Gulsaga <small>HOSPITALITY</small>
       </span>
-      <strong>{member?.displayName ?? "Member"}</strong>
+      <strong>{membership?.fullName ?? member?.displayName ?? "Member"}</strong>
       <span className="md-card-meta">
-        <Crown size={14} /> {member?.memberVerified ? "Verified member" : "Membership pending"}
+        <Crown size={14} />{" "}
+        {active
+          ? `${planLabel} Member`
+          : membership
+            ? `${planLabel} · ${membership.status === "APPROVED" ? "Payment pending" : "Under review"}`
+            : "Membership not started"}
       </span>
-      <span className="md-card-meta">Membership no. {pending}</span>
+      <span className="md-card-meta">Member ID: {membership?.memberCode ?? pending}</span>
+      {active ? (
+        <span className="md-card-qr">
+          <QRCodeSVG value={`GULSAGA-MEMBER:${membership.memberCode}`} size={64} />
+        </span>
+      ) : null}
+      {membership?.validTill ? (
+        <span className="md-card-meta">
+          Valid till: {new Date(membership.validTill).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+        </span>
+      ) : null}
     </div>
   );
+
+  const priceLine =
+    membership?.finalAmount != null ? (
+      <p className="md-note">
+        Membership fee:{" "}
+        {membership.discountPercent ? (
+          <>
+            <s>{formatInr(membership.listAmount ?? 0)}</s> <strong>{formatInr(membership.finalAmount)}</strong> (
+            {membership.discountPercent}% special discount
+            {membership.discountNote ? ` - ${membership.discountNote}` : ""})
+          </>
+        ) : (
+          <strong>{formatInr(membership.finalAmount)}</strong>
+        )}
+      </p>
+    ) : null;
+
+  const membershipBanner =
+    member && (!membership || membership.status !== "ACTIVE") ? (
+      <section className="md-panel md-membership-banner">
+        {!membership ? (
+          <>
+            <h2>Become a Gulsaga member</h2>
+            <p className="md-note">Pick a plan to get your member ID and digital card.</p>
+            <Link to="/membership/join" className="md-link">
+              Choose a plan <ArrowRight size={13} />
+            </Link>
+          </>
+        ) : membership.status === "APPROVED" ? (
+          <>
+            <h2>Your {planLabel} request is approved</h2>
+            <p className="md-note">
+              Complete the payment to activate your card.{" "}
+              {membership.adminNote ? membership.adminNote : ""}
+            </p>
+            {priceLine}
+            {membership.paymentLink ? (
+              /^https?:\/\//i.test(membership.paymentLink) ? (
+                <a className="md-link" href={membership.paymentLink} target="_blank" rel="noreferrer">
+                  Pay now <ArrowRight size={13} />
+                </a>
+              ) : (
+                <p className="md-note">Payment details: {membership.paymentLink}</p>
+              )
+            ) : null}
+          </>
+        ) : membership.status === "REJECTED" ? (
+          <>
+            <h2>Membership request not approved</h2>
+            <p className="md-note">{membership.adminNote || "Please contact support."}</p>
+            <Link to="/membership/join" className="md-link">
+              Apply again <ArrowRight size={13} />
+            </Link>
+          </>
+        ) : (
+          <>
+            <h2>Your {planLabel} request is under review</h2>
+            {priceLine}
+            <p className="md-note">We'll update your dashboard once the team approves it.</p>
+          </>
+        )}
+      </section>
+    ) : null;
 
   const tracker = (
     <section className="md-panel" aria-labelledby="md-tracker">
@@ -141,19 +320,19 @@ export function MemberDashboard() {
       <dl className="md-kv">
         <div>
           <dt>Eligible booking amount</dt>
-          <dd>{pending}</dd>
+          <dd>{extras.backs && extras.backs.rows.length ? formatInr(extras.backs.eligible) : pending}</dd>
         </div>
         <div>
           <dt>Applicable 50% benefit</dt>
-          <dd>{pending}</dd>
+          <dd>{extras.backs && extras.backs.rows.length ? formatInr(extras.backs.benefit) : pending}</dd>
         </div>
         <div>
           <dt>Already credited</dt>
-          <dd>{pending}</dd>
+          <dd>{extras.backs && extras.backs.rows.length ? formatInr(extras.backs.credited) : pending}</dd>
         </div>
         <div>
           <dt>Pending amount</dt>
-          <dd>{pending}</dd>
+          <dd>{extras.backs && extras.backs.rows.length ? formatInr(extras.backs.pending) : pending}</dd>
         </div>
       </dl>
       <p className="md-note">{plan.refundDisclaimer}</p>
@@ -204,6 +383,15 @@ export function MemberDashboard() {
   const views: Record<string, ReactNode> = {
     Dashboard: (
       <>
+        {membershipBanner}
+        {member && !member.hasPassword ? (
+          <section className="md-panel">
+            <PasswordCard
+              hasPassword={false}
+              onSaved={() => setMember((current) => (current ? { ...current, hasPassword: true } : current))}
+            />
+          </section>
+        ) : null}
         <section className="md-hero" aria-label="Welcome">
           <h2>Welcome back, {firstName}!</h2>
           <p>Continue your Gulsaga journey and explore your next extraordinary experience.</p>
@@ -230,9 +418,15 @@ export function MemberDashboard() {
           </section>
           <section className="md-panel">
             <h2>Upcoming booking</h2>
-            <Empty title="No bookings yet">
-              Reservations made through Gulsaga will appear here.
-            </Empty>
+            {nextBooking ? (
+              <ul className="mx-list">
+                <BookingCard booking={nextBooking} />
+              </ul>
+            ) : (
+              <Empty title="No bookings yet">
+                Reservations made through Gulsaga will appear here.
+              </Empty>
+            )}
           </section>
           {benefits}
           {tracker}
@@ -320,30 +514,26 @@ export function MemberDashboard() {
         {tracker}
         <section className="md-panel">
           <h2>50% Back transaction history</h2>
-          <Empty title="No transactions" />
+          {extras.backs?.rows.length ? (
+            <ul className="md-list">
+              {extras.backs.rows.map((r) => (
+                <li key={r.id}>
+                  <strong>{formatInr(r.amount)}</strong>
+                  <span className="md-badge">{r.kind === "CREDIT" ? "credited" : "eligible booking"}</span>
+                  <small>
+                    {new Date(r.at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    {r.note ? ` · ${r.note}` : ""}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Empty title="No transactions" />
+          )}
         </section>
       </>
     ),
-    "My Bookings": (
-      <section className="md-panel">
-        <h2>My bookings</h2>
-        <div className="md-tabs" role="list">
-          {["Upcoming", "Completed", "Cancelled"].map((label) => (
-            <span key={label} role="listitem">
-              {label} · 0
-            </span>
-          ))}
-        </div>
-        <Empty title="No bookings yet">
-          Status, invoices, cancellation and reschedule requests will be available here once online
-          booking is connected. For now,{" "}
-          <Link to="/contact" search={{ hotel: "" }}>
-            contact Gulsaga
-          </Link>{" "}
-          to book.
-        </Empty>
-      </section>
-    ),
+    "My Bookings": <BookingsView bookings={extras.bookings} loaded={extras.loaded} />,
     "My Experiences": (
       <section className="md-panel">
         <h2>My experiences</h2>
@@ -382,17 +572,7 @@ export function MemberDashboard() {
       </section>
     ),
     "Exclusive Offers": (
-      <section className="md-panel">
-        <h2>Exclusive offers</h2>
-        <Empty title="No member offers published">
-          Member-only offers will appear here when Gulsaga publishes them.
-        </Empty>
-        <ul className="md-checks">
-          {plan.offerPerks.map((perk) => (
-            <li key={perk}>{perk}</li>
-          ))}
-        </ul>
-      </section>
+      <OffersView offers={extras.offers} active={extras.offersActive} loaded={extras.loaded} perks={plan.offerPerks} />
     ),
     "Refer & Earn": (
       <section className="md-panel">
@@ -421,14 +601,18 @@ export function MemberDashboard() {
           <div>
             <dt>Joined</dt>
             <dd>
-              {member?.joinedAt ? new Date(member.joinedAt).toLocaleDateString("en-IN") : pending}
+              {member?.joinedAt ? new Date(member.joinedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : pending}
             </dd>
           </div>
         </dl>
         <p className="md-note">
-          You sign in with a one-time code sent to this email. To change your details, contact
-          support.
+          You can sign in with a one-time code sent to this email or with a password. To change
+          your details, contact support.
         </p>
+        <PasswordCard
+          hasPassword={Boolean(member?.hasPassword)}
+          onSaved={() => setMember((current) => (current ? { ...current, hasPassword: true } : current))}
+        />
       </section>
     ),
     "Help & Support": (

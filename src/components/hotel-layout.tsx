@@ -97,7 +97,7 @@ export function Layout({
       {!experienceMode && !resortMode && (
         <div className={home || networkMode ? "announcement announcement-home" : "announcement"}>
           {content.brand.announcement}
-          <Link to="/membership" onClick={closeMenu}>
+          <Link to="/membership/join" onClick={closeMenu}>
             {content.brand.membershipLabel} <ArrowUpRight size={12} />
           </Link>
         </div>
@@ -181,11 +181,11 @@ export function Layout({
                 Become a Partner <ArrowUpRight />
               </Link>
             ) : experienceMode ? (
-              <Link to="/membership" className="experience-nav-cta">
+              <Link to="/membership/join" className="experience-nav-cta">
                 Join Membership <ArrowUpRight />
               </Link>
             ) : home ? (
-              <Link to="/membership">
+              <Link to="/membership/join">
                 {content.brand.membershipLabel} <ArrowUpRight />
               </Link>
             ) : (
@@ -467,11 +467,15 @@ function SiteFooter() {
             © {new Date().getFullYear()} {content.brand.name}. {footerContent.copyright}
           </span>
           <nav aria-label="Legal">
-            {footerContent.legalLinks.map((item, index) => (
-              <a href={item.href} key={`${item.label}-${index}`}>
-                {item.label}
-              </a>
-            ))}
+            <a href="/policies?doc=terms">Terms &amp; Conditions</a>
+            <a href="/policies?doc=privacy">Privacy Policy</a>
+            {footerContent.legalLinks
+              .filter((item) => !/terms|privacy/i.test(item.label))
+              .map((item, index) => (
+                <a href={item.href} key={`${item.label}-${index}`}>
+                  {item.label}
+                </a>
+              ))}
           </nav>
           <div className="footer-mountain-art" aria-hidden="true">
             <svg viewBox="0 0 240 80">

@@ -170,7 +170,7 @@ const defaultPrompt =
 
 // Real properties from the database, appended to the AI prompt.
 async function resortContext(sql) {
-  const rows = await sql('resorts').select('name', 'location', 'category', 'stars').orderBy('sort_order').limit(60).catch(() => []);
+  const rows = await sql('resorts').where({ listed: true }).select('name', 'location', 'category', 'stars').orderBy('sort_order').limit(60).catch(() => []);
   return rows.length ? '\n\nOur resorts:\n' + rows.map((r) => `- ${r.name} (${r.location}, ${r.stars} star, ${r.category})`).join('\n') : '';
 }
 
@@ -220,7 +220,7 @@ const editDistance = (a, b) => {
 export async function destinationReply(sql, text) {
   const t = String(text || '').toLowerCase();
   const words = t.split(/[^a-z]+/).filter((w) => w.length > 2 && !stop.has(w));
-  const rows = (await sql('resorts').select('name', 'location', 'category', 'stars').orderBy('sort_order').limit(100)).filter((r) => !/global/i.test(r.location || ''));
+  const rows = (await sql('resorts').where({ listed: true }).select('name', 'location', 'category', 'stars').orderBy('sort_order').limit(100)).filter((r) => !/global/i.test(r.location || ''));
   const destOf = (r) => String(r.location || '').split(',').pop().trim();
   const dests = [...new Set(rows.map(destOf))];
   const matches = (d, w) => d.toLowerCase().split(/\s+/).some((p) => p === w || (w.length >= 4 && (p.includes(w) || (p.length >= 4 && editDistance(p, w) <= 1))));
@@ -242,7 +242,7 @@ export async function knowledgeReply(sql, text) {
   const words = String(text || '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !stop.has(w));
   const wantsList = /\b(resorts?|hotels?|destinations?|properties|places|kahan|kaha|where)\b/i.test(text);
   if (!words.length && !wantsList) return null;
-  const rows = await sql('resorts').select('name', 'location', 'category', 'stars', 'description', 'slug').orderBy('sort_order').limit(100);
+  const rows = await sql('resorts').where({ listed: true }).select('name', 'location', 'category', 'stars', 'description', 'slug').orderBy('sort_order').limit(100);
   const hits = rows.filter((r) => words.some((w) => `${r.name} ${r.location}`.toLowerCase().includes(w)));
   if (hits.length === 1 || (hits.length && hits.length <= 3 && !wantsList)) {
     return hits.slice(0, 3).map((r) => `*${r.name}* – ${r.location} (${r.stars}★, ${r.category}).\n${String(r.description || '').slice(0, 220)}`).join('\n\n') + `\n\nMore: ${site()}/resorts\nReply BOOKING to plan your stay.`;
@@ -305,6 +305,10 @@ export function createWhatsappNotifier({ sql }) {
       for (const phone of await staffFor(resortId)) {
         await send(phone, `New booking #${b.id} at ${resort}: ${b.guest_name ?? b.guestName}, ${fmtDate(b.check_in ?? b.checkIn)} to ${fmtDate(b.check_out ?? b.checkOut)}, ${b.guests} guest(s).\nReply CONFIRM ${b.id} or CANCEL ${b.id}. To choose the advance the guest pays, reply e.g. CONFIRM ${b.id} 2000.`, 'booking', { staff: true });
       }
+    },
+    // Head-office WhatsApp alert (WHATSAPP_ADMIN_NUMBERS) for anything partners do in the portal.
+    async adminAlert(text) {
+      for (const n of adminNumbers()) await send(n, text, 'alert', { staff: true });
     },
     // Booking status changed (portal button or a WhatsApp command from staff).
     async bookingStatus(resortId, bookingId) {
@@ -528,7 +532,7 @@ async function converse(sql, notify, phone, name, text) {
 
 async function bookFlow(sql, notify, phone, name, step, data, t, save, clear) {
   // Destination = state/region (last part of "Place, State"). Mirrors the website: destination first, then resort.
-  const all = (await sql('resorts').select('id', 'name', 'location').orderBy('sort_order').limit(60))
+  const all = (await sql('resorts').where({ listed: true }).select('id', 'name', 'location').orderBy('sort_order').limit(60))
     .filter((r) => !/global/i.test(r.location || ''))
     .map((r) => ({ id: r.id, name: r.name, location: r.location, dest: String(r.location || '').split(',').pop().trim() }));
   const destinations = [...new Set(all.map((r) => r.dest))].map((d) => ({ label: d }));
